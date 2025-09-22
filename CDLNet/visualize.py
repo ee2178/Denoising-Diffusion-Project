@@ -31,19 +31,29 @@ def main(model_args):
     
     # Load image in from test dataset
     loader = data.get_data_loader([ARGS.test], test=True)
-    test_img = next(iter(loader))
-    plt.imshow(np.squeeze(test_img))
-    plt.savefig('test.png')
-    test_img = test_img.to(device)
+    iterator = iter(loader)
+    test_dir = os.listdir(ARGS.test)
+    for i in range(len([name for name in test_dir if os.path.isfile(os.path.join(ARGS.test, name))])):
+        test_img = next(iterator)
+        fig, ax = plt.subplots(1, 3)
+        plt.suptitle("CDLNet Results")
+        ax[0].imshow(np.squeeze(test_img), cmap='gray')
+        ax[0].set_title('Test Image')
+        # plt.savefig('test.png')
+        test_img = test_img.to(device)
+        
+        noisy_test_img = awgn(test_img, ARGS.noise_level)
+        ax[1].imshow(np.squeeze(noisy_test_img[0].cpu()), cmap = 'gray')
+        ax[1].set_title('Noisy Image')
+        # plt.savefig('noisy_test.png')
+        
+        denoised_test = net(test_img)
+        ax[2].imshow(np.squeeze(denoised_test[0].detach().cpu().numpy()), cmap= 'gray')
+        ax[2].set_title('Denoised Image')
+        plt.tight_layout()
+        fig.savefig(os.path.join('results/', test_dir[i]))
     
-    noisy_test_img = awgn(test_img, [20, 30])
-    plt.imshow(np.squeeze(noisy_test_img[0].cpu()))
-    plt.savefig('noisy_test.png')
     
-    denoised_test = net(test_img)
-    plt.imshow(np.squeeze(denoised_test[0].detach().cpu().numpy()))
-    plt.savefig('denoised.png')
-    breakpoint()
     
 if __name__ == "__main__":
     """ Load arguments from json file and command line and pass to main.
