@@ -16,6 +16,7 @@ def awgn(input, noise_std):
 	           between noise_std[0] and noise_std[1]. Expected to be in interval
 			   [0,255]
 	"""
+ 	
 	if not isinstance(noise_std, (list, tuple)):
 		sigma = noise_std
 	else: # uniform sampling of sigma

@@ -9,17 +9,17 @@ import torch.nn.functional as F
 from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from utils import awgn
+from train_utils import awgn
 
 import model
-import nle
-import utils, data, train
+import train_utils
+import data, train
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("args_fn", type=str, help="Path to args.json file.", default="args.json")
 parser.add_argument("--test", type=str, help="Run model over specified test set (provided path to image dir).", default=None)
-parser.add_argument("--noise_level", type=int, nargs='*', help="Input noise-level(s) on [0,255] range. Single value required for --passthrough. If --test is used, multiple values can be specified.", default=[-1])
+# parser.add_argument("--noise_level", type=int, nargs='*', help="Input noise-level(s) on [0,255] range. Single value required for --passthrough. If --test is used, multiple values can be specified.", default=[-1])
 ARGS = parser.parse_args()
 
 def main(model_args):
@@ -41,7 +41,6 @@ def main(model_args):
         ax[0].set_title('Test Image')
         # plt.savefig('test.png')
         test_img = test_img.to(device)
-        
         noisy_test_img = awgn(test_img, ARGS.noise_level)
         ax[1].imshow(np.squeeze(noisy_test_img[0].cpu()), cmap = 'gray')
         ax[1].set_title('Noisy Image')

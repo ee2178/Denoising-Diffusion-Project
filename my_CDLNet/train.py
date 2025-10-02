@@ -87,7 +87,6 @@ def fit(net, opt, loaders,
                 with torch.set_grad_enabled(phase == 'train'):
                     # Make predictions per batch
                     batch_hat, _ = net(obsrv_batch, sigma_n, mask=mask)
-                    breakpoint()
                     # supervised or unsupervised (MCSURE) loss during training
                     if mcsure and phase == "train":
                         h = 1e-3
