@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from model import CDLNet
 from train_utils import awgn
-from data import get_fit_loaders
+from mri_data import get_fit_loaders
 
 def main(args):
     """ Given argument dictionary, load data, initialize model, and fit model.
@@ -236,7 +236,7 @@ def load_ckpt(path, net=None,opt=None,sched=None):
     Loads net, optimizer, scheduler and epoch number
     from state dict stored in path.
     """
-    ckpt = torch.load(path, map_location=torch.device('cpu'))
+    ckpt = torch.load(path, map_location=torch.device('cpu'), weights_only=False)
     def setSD(obj, name):
         if obj is not None and name+"_state_dict" in ckpt:
             print(f"Loading {name} state-dict...")

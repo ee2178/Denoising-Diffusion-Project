@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from model import CDLNet
 from data import get_fit_loaders
-from utils import awgn, gen_bayer_mask
+from my_CDLNet.utils import awgn, gen_bayer_mask
 
 def main(args):
     """ Given argument dictionary, load data, initialize model, and fit model.
