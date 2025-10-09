@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:rtx8000:1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32GB
-#SBATCH --time=10:00:00
-#SBATCH --job-name=CDLNet-Basic
+#SBATCH --time=15:00:00
+#SBATCH --job-name=CDLNet-MRI
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=slurm_%j.out

@@ -2,23 +2,23 @@
 "type": "CDLNet",
 "model": {
 	"adaptive": true,
-	"K": 20,
-	"M": 32,
+	"K": 30,
+	"M": 169,
 	"C": 1,
 	"P": 7,
-	"s": 1
+	"s": 2
 },
 "paths": {
 	"save": "trained_nets/CDLNet-s2030",
-	"ckpt": "trained_nets/CDLNet-s2030/net.ckpt"
+	"ckpt": null
 },
 "train": {
 	"loaders": {
 		"batch_size": 10,
 		"crop_size": 128,
-		"trn_path_list": ["dataset/CBSD432"],
-		"val_path_list": ["dataset/Kodak"],
-		"tst_path_list": ["dataset/CBSD68"],
+		"trn_path_list": ["../../datasets/fastmri/brain/multicoil_train"],
+		"val_path_list": ["../../datasets/fastmri/brain/multicoil_val"],
+		"tst_path_list": ["../../datasets/fastmri/brain/multicoil_test"],
 		"load_color": false
 	},
 	"fit": {

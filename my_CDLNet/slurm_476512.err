@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 10, in <module>
+    from mri_data import get_fit_loaders
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/mri_data.py", line 47
+    normalized_image = (image - np.min(image))/(np.max(image)-np.min(image))
+TabError: inconsistent use of tabs and spaces in indentation

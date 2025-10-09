@@ -9,6 +9,8 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from tqdm import tqdm
 import h5py
+import random
+from PIL import Image
 
 class MRIDataset(data.Dataset):
 	def __init__(self, root_dirs, transform, load_color=False):
@@ -23,10 +25,7 @@ class MRIDataset(data.Dataset):
 
 		print(f"Loading {root_dirs}:")
 		for i in tqdm(range(len(self.image_paths))):
-			if load_color:
-				self.image_list.append(Image.open(self.image_paths[i]))
-			else:
-				self.image_list.append(Image.open(self.image_paths[i]).convert('L'))
+			self.image_list.append(self.image_paths[i])
 
 		self.root_dirs = root_dirs
 		self.transform = transform
@@ -40,12 +39,13 @@ class MRIDataset(data.Dataset):
         # Grab random slice within kspace volume
 		volume_kspace = hf['kspace']
 		slices = volume_kspace.shape[0]
-		kspace = volume_kspace[torch.randint(0, slices-1), :, :, :]
+		kspace = volume_kspace[random.randint(0, slices-1), :, :, :]
 		# Transform multicoil into image domain
-		image_multicoil = torch.fft.ifft2(kspace)
+		image_multicoil = np.fft.ifft2(kspace)
 		# RSS transformation
-		image = torch.linalg.norm(image_multicoil, ord = 2, dim = (1, 2))
-		return self.transform(image)
+		image = np.linalg.norm(image_multicoil, ord = 2, axis = 0)
+        normalized_image = (image - np.min(image))/(np.max(image)-np.min(image))
+        return self.transform(Image.fromarray(normalized_image))
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True):
     # Don't perform random transformations if in test phase
@@ -57,7 +57,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
 		                          transforms.RandomVerticalFlip(),
 		                          transforms.ToTensor()])
 
-	return data.DataLoader(MyDataset(dir_list, xfm, load_color),
+	return data.DataLoader(MRIDataset(dir_list, xfm, load_color),
 	                       batch_size = batch_size,
 	                       drop_last  = (not test),
 	                       shuffle    = (not test))
