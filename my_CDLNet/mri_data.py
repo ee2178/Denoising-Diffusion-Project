@@ -93,7 +93,7 @@ def crop_center_kspace(kspace, crop_size):
     out[:, :, ch_start:ch_end, cw_start:cw_end] = kspace[:, :, ch_start:ch_end, cw_start:cw_end]
     return out
 
-def save_volume(volume, dir, name):
+def save_volume(volume, dir, name, target_dir):
 	# Iterate through each slice and save complex valued tensor
 	# Assume dir is B x H x W
 	for i in range(volume.shape[0]):
@@ -101,11 +101,17 @@ def save_volume(volume, dir, name):
 		# Get filename without h5 extension
 		name = os.path.splitext(name)[0]
 		# Save complex tensor 
-		destination = os.path.join(dir, name + 'slice_'+ str(i) +'.pt')
+		if dir.endswith('train'):
+			split = 'train'
+		elif dir.endswith('val'):
+			split = 'val'
+		elif dir.endswith('test'):
+			split = 'test'
+		destination = os.path.join(target_dir, split, name + 'slice_'+ str(i) +'.pt')
 		torch.save(slice, destination)
 	return None
 
-def main(dirs):
+def main(dirs, target_dir):
 	for dir in dirs:
 		if dir: 
 			for name in os.listdir(dir):
@@ -123,7 +129,7 @@ def main(dirs):
                     # Apply sensitivity maps and then sum
 					volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
                     # Save each slice individually
-					save_volume(volume_combined, dir, name)
+					save_volume(volume_combined, dir, name, target_dir)
 	return None
 
 if __name__ == "__main__":
