@@ -11,112 +11,119 @@ parser.add_argument("--test", type=str, help="Run preprocessing over specified t
 parser.add_argument("--target", type=str, help="Store processed images in a new target directory.", default=None)
 ARGS = parser.parse_args()
 
-# ChatGPT version of Nikola's espirit code 
-def espirit(kspace: torch.Tensor, 
-            acs_size=(32, 32), 
-            kernel_size=8, 
-            thresh_rowspace=0.05, 
-            thresh_eig=0.95, 
-            power_method=False, 
-            rtol=1e-3, 
-            maxit=100):
+def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     """
-    PyTorch version of ESPIRiT coil sensitivity estimation.
+    Computes coil sensitivity maps using the Walsh method.
 
     Args:
-        kspace: Tensor of shape (Nx, Ny, Ncoils, Batch)
-        acs_size: Autocalibration region size
-        kernel_size: Convolution kernel size
-        thresh_rowspace: SVD threshold for rowspace
-        thresh_eig: Eigenvalue threshold for sensitivity mask
-        power_method: Not implemented
-        rtol: Relative tolerance for power method
-        maxit: Max iterations for power method
+        y: complex tensor of shape (B, C, H, W)
+        ks: patch size
+        stride: patch stride
 
     Returns:
-        smaps: Sensitivity maps (Nx, Ny, Ncoils, Batch) --> batch will be the size of the image volume
+        smaps: sensitivity maps of shape (B, C, H, W)
     """
-    device = kspace.device
-    Nx, Ny, Ncoils, B = kspace.shape
-    Cx, Cy = Nx // 2, Ny // 2
+    B, C, H, W = y.shape
 
-    # 1. Extract ACS region
-    x1 = slice(Cx - acs_size[0]//2, Cx + acs_size[0]//2)
-    y1 = slice(Cy - acs_size[1]//2, Cy + acs_size[1]//2)
-    kspace_acs = kspace[x1, y1, :, :]  # [acs_x, acs_y, Ncoils, B]
+    # Unfold patches: shape (B*C, ks*ks, Npatches)
+    # y_reshaped = y.reshape(B * C, 1, H, W)
+    unfolded = F.unfold(y, kernel_size=(ks, ks), stride=stride)  # (B, C*ks*ks, Npatches)
+    Npatch = unfolded.shape[-1]
 
-    # 2. Extract sliding patches: [num_patches, Ncoils * kernel_size**2, B]
-    patches = kspace_acs.permute(3, 2, 0, 1)  # [B, C, H, W]
-    unfold = torch.nn.Unfold(kernel_size=kernel_size)
-    A = unfold(patches.view(B * Ncoils, 1, *kspace_acs.shape[:2]))  # [B*C, K², num_patches]
-    A = A.view(B, Ncoils, kernel_size**2, -1).permute(3, 2, 1, 0).reshape(-1, kernel_size**2 * Ncoils, B)
+    # Reshape to (ks*ks, C, Npatch*B)
+    Yp = unfolded.permute(0, 2, 1)
+    Yp = Yp.reshape(B*Npatch, ks*ks, C)
+    # Covariance matrix X: (Npatch*B, C, C)
+    X = Yp.adjoint() @ Yp
+    # Reference coil (max signal energy)
+    power = y.abs().pow(2).sum(dim=(2, 3, 0))  # (C,)
+    Cref = power.argmax().item()
 
-    # 3. SVD
-    if A.shape[0] < A.shape[1]:
-        A_perm = A.permute(1, 0, 2)
-        U, S, Vh = torch.linalg.svd(A_perm, full_matrices=False)
-        V = U.conj()
+    Q, _, V = torch.linalg.svd(X, full_matrices=False)
+    Q = V[:, 0, :]  # (Npatch*B, C)
+    print(Q.shape)
+    print(V.shape)
+
+    Q = Q.view(B, Npatch, C) # (B, Npatch, C)
+    Q = Q.permute(2, 0, 1) # (C, B, Npatch)
+
+    # Align phase using reference coil
+    qref = Q[Cref:Cref + 1, :, :]
+    Q *= qref.conj().sgn()
+
+    # Reshape to low-res map: (B, C, Hp, Wp)
+    Hp = (H - ks) // stride + 1
+    Wp = (W - ks) // stride + 1
+    smaps_p = Q.permute(1, 0, 2).reshape(B, C, Hp, Wp)
+
+    # Upsample to full size
+    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
+    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
+    smaps = torch.complex(smaps_real, smaps_imag)
+    # Normalize
+    norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
+    print(norm.shape)
+    smaps /= (norm.sqrt() + 1e-6)
+
+    return smaps.conj()
+# Perform zero filled reconstruction on the center of kspace
+def crop_center_kspace(kspace, crop_size):
+    """
+    Crop the central region of k-space.
+
+    Args:
+        kspace: complex tensor of shape (B, C, H, W)
+        crop_size: int or (h, w)
+
+    Returns:
+        Cropped k-space of same shape, with zeros outside the central region.
+    """
+    B, C, H, W = kspace.shape
+    if isinstance(crop_size, int):
+        crop_h = crop_w = crop_size
     else:
-        U, S, Vh = torch.linalg.svd(A, full_matrices=False)
-        V = Vh
+        crop_h, crop_w = crop_size
 
-    # 4. Truncate basis using rowspace threshold
-    vNbasis = [torch.sum(S[:, b] >= thresh_rowspace * S[0, b]).item() for b in range(B)]
-    Nbasis = max(vNbasis)
-    Vr = V[:, :Nbasis, :].clone()
-    for b, nb in enumerate(vNbasis):
-        Vr[:, nb:, b] = 0
+    out = torch.zeros_like(kspace)
+    ch_start = H // 2 - crop_h // 2
+    ch_end = ch_start + crop_h
+    cw_start = W // 2 - crop_w // 2
+    cw_end = cw_start + crop_w
 
-    # 5. Reshape to k-space kernels
-    Vkernel = Vr.view(kernel_size, kernel_size, Ncoils, Nbasis, B)
+    out[:, :, ch_start:ch_end, cw_start:cw_end] = kspace[:, :, ch_start:ch_end, cw_start:cw_end]
+    return out
 
-    # 6. Pad and FFT to image domain
-    pad_x = (Nx - kernel_size) // 2
-    pad_y = (Ny - kernel_size) // 2
-    padded = F.pad(Vkernel.permute(4, 3, 2, 0, 1), (pad_y, pad_y, pad_x, pad_x))  # [B, Nbasis, C, H, W]
-    Vk_imspace = torch.fft.ifft2(padded, dim=(-2, -1), norm='forward')  # Image domain
-
-    # 7. Reshape for projection operator
-    Vk_imspace = Vk_imspace.permute(3, 4, 2, 1, 0)  # [H, W, C, Nbasis, B]
-    Vk_flat = Vk_imspace.view(Nx*Ny, Ncoils, Nbasis, B).permute(1, 2, 0, 3).reshape(Ncoils, Nbasis, Nx*Ny*B)
-
-    # 8. Compute projection matrix Veff = V * Vᴴ
-    Vh = Vk_flat.conj().permute(1, 0, 2)  # [Nbasis, Ncoils, ...]
-    Veff = torch.matmul(Vk_flat, Vh) / (kernel_size ** 2)  # [C, C, ...]
-
-    # 9. Eigen-decomposition
-    if power_method:
-        raise NotImplementedError("Power method is not implemented.")
-    else:
-        Q, L, _ = torch.linalg.svd(Veff, full_matrices=False)
-        Q = Q[:, 0, :].reshape(Ncoils, Nx, Ny, B)
-        L = L[0, :].reshape(Nx, Ny, 1, B)
-
-    # 10. Mask and normalize phase
-    mask = L > thresh_eig
-    smaps = mask * Q.permute(1, 2, 0, 3).conj()
-    smaps *= smaps[:, :, :1, :].conj() / (smaps[:, :, :1, :].abs() + 1e-8)
-
-    return smaps
+def save_volume(volume, dir, name):
+	# Iterate through each slice and save complex valued tensor
+	# Assume dir is B x H x W
+	for i in range(volume.shape[0]):
+		slice = volume[i, :, :]
+		# Get filename without h5 extension
+		name = os.path.splitext(name)[0]
+		# Save complex tensor 
+		destination = os.path.join(dir, name + 'slice_'+ str(i) +'.pt')
+		torch.save(slice, destination)
+	return None
 
 def main(dirs):
 	for dir in dirs:
 		if dir: 
 			for name in os.listdir(dir):
-				if name.startswith('')
-				# Every file in these directories should be h5 files anyway
-				hf = h5py.File(name)
-				volume_kspace = hf['kspace'][()]
-				# Convert to pytorch tensor (complex valued)
-				volume_kspace = torch.from_numpy(volume_kspace)
-				# Reshape operation (n_slices, n_coils, height, width) -> (Nx, Ny, Ncoils, Batch)
-				volume_kspace = torch.reshape(volume_kspace, shape = (2, 3, 1, 0))
-				smaps = espirit(volume_kspace)
-				# Apply sensitivity maps and then sum
-				volume_combined = torch.einsum('ijkl,ijkl->ijl', volume_kspace, smaps)
-				# Convert to image domain (complex valued) after reshaping to change batch to first dimension
-				volume_img = torch.fft.ifft2(torch.reshape(volume_combined, (2, 0, 1)))
-    			# Save image domain volume
+				# Only get T2 weighted brain 
+				if name.startswith('file_brain_AXT2'):
+					# Every file in these directories should be h5 files anyway
+					hf = h5py.File(name)
+					volume_kspace = hf['kspace'][()]
+                    # Convert to pytorch tensor (complex valued)
+					volume_kspace = torch.from_numpy(volume_kspace)
+                    # Get kspace centers
+					volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
+					volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace_centers))
+					smaps = walsh_smaps(volume_img_centers)
+                    # Apply sensitivity maps and then sum
+					volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
+                    # Save each slice individually
+					save_volume(volume_combined, dir, name)
 	return None
 
 if __name__ == "__main__":
