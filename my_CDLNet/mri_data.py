@@ -112,27 +112,27 @@ def main(dirs, target_dir):
     # Get device
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
-	for dir in dirs:
-		if dir: 
-			for name in os.listdir(dir):
+    for dir in dirs:
+        if dir: 
+            for name in os.listdir(dir):
 				# Only get T2 weighted brain 
-				if name.startswith('file_brain_AXT2'):
+                if name.startswith('file_brain_AXT2'):
 					# Every file in these directories should be h5 files anyway
-					hf = h5py.File(os.path.join(dir, name))
-					volume_kspace = hf['kspace'][()]
+                    hf = h5py.File(os.path.join(dir, name))
+                    volume_kspace = hf['kspace'][()]
                     # Convert to pytorch tensor (complex valued)
-					volume_kspace = torch.from_numpy(volume_kspace)
+                    volume_kspace = torch.from_numpy(volume_kspace)
                     # Put on GPU
                     volume_kspace = volume_kspace.to(device)
                     # Get kspace centers
-					volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
-					volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace_centers))
-					smaps = walsh_smaps(volume_img_centers)
+                    volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
+                    volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace_centers))
+                    smaps = walsh_smaps(volume_img_centers)
                     # Apply sensitivity maps and then sum
-					volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
+                    volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
                     # Save each slice individually
-					save_volume(volume_combined, dir, name, target_dir)
-	return None
+                    save_volume(volume_combined, dir, name, target_dir)
+    return None
 
 if __name__ == "__main__":
     # Iterate through the directories specified
