@@ -41,8 +41,6 @@ def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
 
     Q, _, V = torch.linalg.svd(X, full_matrices=False)
     Q = V[:, 0, :]  # (Npatch*B, C)
-    print(Q.shape)
-    print(V.shape)
 
     Q = Q.view(B, Npatch, C) # (B, Npatch, C)
     Q = Q.permute(2, 0, 1) # (C, B, Npatch)
@@ -62,7 +60,6 @@ def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     smaps = torch.complex(smaps_real, smaps_imag)
     # Normalize
     norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
-    print(norm.shape)
     smaps /= (norm.sqrt() + 1e-6)
 
     return smaps.conj()
@@ -112,16 +109,21 @@ def save_volume(volume, dir, name, target_dir):
 	return None
 
 def main(dirs, target_dir):
+    # Get device
+    ngpu = torch.cuda.device_count()
+    device = torch.device("cuda:0" if ngpu > 0 else "cpu")
 	for dir in dirs:
 		if dir: 
 			for name in os.listdir(dir):
 				# Only get T2 weighted brain 
 				if name.startswith('file_brain_AXT2'):
 					# Every file in these directories should be h5 files anyway
-					hf = h5py.File(name)
+					hf = h5py.File(os.path.join(dir, name))
 					volume_kspace = hf['kspace'][()]
                     # Convert to pytorch tensor (complex valued)
 					volume_kspace = torch.from_numpy(volume_kspace)
+                    # Put on GPU
+                    volume_kspace = volume_kspace.to(device)
                     # Get kspace centers
 					volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
 					volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace_centers))
@@ -137,6 +139,8 @@ if __name__ == "__main__":
     # Grab a sample k-space volume shaped (n_slices, n_coils, height, width)
     dirs = [ARGS.train, ARGS.val, ARGS.test]
     target_dir = ARGS.target
+    print(dirs)
+    print(target_dir)
     main(dirs, target_dir)
         
     
