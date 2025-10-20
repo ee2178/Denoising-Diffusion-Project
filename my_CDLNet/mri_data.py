@@ -90,22 +90,31 @@ def crop_center_kspace(kspace, crop_size):
     out[:, :, ch_start:ch_end, cw_start:cw_end] = kspace[:, :, ch_start:ch_end, cw_start:cw_end]
     return out
 
-def save_volume(volume, dir, name, target_dir):
+def save_volume(kspace, volume, smaps, dir, name, target_dir):
 	# Iterate through each slice and save complex valued tensor
 	# Assume dir is B x H x W
-	for i in range(volume.shape[0]):
-		slice = volume[i, :, :]
-		# Get filename without h5 extension
-		name = os.path.splitext(name)[0]
-		# Save complex tensor 
-		if dir.endswith('train'):
-			split = 'train'
-		elif dir.endswith('val'):
-			split = 'val'
-		elif dir.endswith('test'):
-			split = 'test'
-		destination = os.path.join(target_dir, split, name + 'slice_'+ str(i) +'.pt')
-		torch.save(slice, destination)
+	# for i in range(volume.shape[0]):
+	# 	slice = volume[i, :, :]
+	# 	# Get filename without h5 extension
+	# 	name = os.path.splitext(name)[0]
+	# 	# Save complex tensor 
+	# 	if dir.endswith('train'):
+	# 		split = 'train'
+	# 	elif dir.endswith('val'):
+	# 		split = 'val'
+	# 	elif dir.endswith('test'):
+	# 		split = 'test'
+	# 	destination = os.path.join(target_dir, split, name + 'slice_'+ str(i) +'.pt')
+	# 	torch.save(slice, destination)
+
+
+    # Save data as hdf5 format as a whole volume
+    # Construct the dataset
+    destination = os.path.join(target_dir, split, name +'.h5')
+    with h5py.File(filename, 'w') as f:
+        f.create_dataset('kspace', data=volume_kspace.numpy())
+        f.create_dataset('image', data=volume_combined.numpy())
+        f.create_dataset('smaps', data=smaps.numpy())
 	return None
 
 def main(dirs, target_dir):
@@ -131,7 +140,7 @@ def main(dirs, target_dir):
                     # Apply sensitivity maps and then sum
                     volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
                     # Save each slice individually
-                    save_volume(volume_combined, dir, name, target_dir)
+                    save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
     return None
 
 if __name__ == "__main__":
