@@ -111,6 +111,12 @@ def save_volume(kspace, volume, smaps, dir, name, target_dir):
     # Save data as hdf5 format as a whole volume
     # Construct the dataset
 	# Need to reset indentations
+    if dir.endswith('train'):
+        split = 'train'
+    elif dir.endswith('val'):
+        split = 'val'
+    elif dir.endswith('test'):
+        split = 'test'
     destination = os.path.join(target_dir, split, name +'.h5')
     with h5py.File(filename, 'w') as f:
         f.create_dataset('kspace', data=volume_kspace.numpy())
