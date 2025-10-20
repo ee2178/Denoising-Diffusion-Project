@@ -110,11 +110,12 @@ def save_volume(kspace, volume, smaps, dir, name, target_dir):
 
     # Save data as hdf5 format as a whole volume
     # Construct the dataset
+	# Need to reset indentations
     destination = os.path.join(target_dir, split, name +'.h5')
-    with h5py.File(filename, 'w') as f:
-        f.create_dataset('kspace', data=volume_kspace.numpy())
-        f.create_dataset('image', data=volume_combined.numpy())
-        f.create_dataset('smaps', data=smaps.numpy())
+	with h5py.File(filename, 'w') as f:
+    	f.create_dataset('kspace', data=volume_kspace.numpy())
+    	f.create_dataset('image', data=volume_combined.numpy())
+    	f.create_dataset('smaps', data=smaps.numpy())
 	return None
 
 def main(dirs, target_dir):
@@ -141,7 +142,7 @@ def main(dirs, target_dir):
                     volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
                     # Save each slice individually
                     save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
-    return None
+	return None
 
 if __name__ == "__main__":
     # Iterate through the directories specified
