@@ -112,14 +112,14 @@ def save_volume(kspace, volume, smaps, dir, name, target_dir):
     # Construct the dataset
 	# Need to reset indentations
     destination = os.path.join(target_dir, split, name +'.h5')
-	with h5py.File(filename, 'w') as f:
-    	f.create_dataset('kspace', data=volume_kspace.numpy())
-    	f.create_dataset('image', data=volume_combined.numpy())
-    	f.create_dataset('smaps', data=smaps.numpy())
-	return None
+    with h5py.File(filename, 'w') as f:
+        f.create_dataset('kspace', data=volume_kspace.numpy())
+        f.create_dataset('image', data=volume_combined.numpy())
+        f.create_dataset('smaps', data=smaps.numpy())
+    return None
 
 def main(dirs, target_dir):
-    # Get device
+	# Get device
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     for dir in dirs:
@@ -142,7 +142,7 @@ def main(dirs, target_dir):
                     volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
                     # Save each slice individually
                     save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
-	return None
+    return None
 
 if __name__ == "__main__":
     # Iterate through the directories specified
