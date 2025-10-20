@@ -90,7 +90,7 @@ def crop_center_kspace(kspace, crop_size):
     out[:, :, ch_start:ch_end, cw_start:cw_end] = kspace[:, :, ch_start:ch_end, cw_start:cw_end]
     return out
 
-def save_volume(kspace, volume, smaps, dir, name, target_dir):
+def save_volume(kspace, image, smaps, dir, name, target_dir):
 	# Iterate through each slice and save complex valued tensor
 	# Assume dir is B x H x W
 	# for i in range(volume.shape[0]):
@@ -119,8 +119,8 @@ def save_volume(kspace, volume, smaps, dir, name, target_dir):
         split = 'test'
     destination = os.path.join(target_dir, split, name +'.h5')
     with h5py.File(destination, 'w') as f:
-        f.create_dataset('kspace', data=volume_kspace.numpy())
-        f.create_dataset('image', data=volume_combined.numpy())
+        f.create_dataset('kspace', data=kspace.numpy())
+        f.create_dataset('image', data=image.numpy())
         f.create_dataset('smaps', data=smaps.numpy())
     return None
 
