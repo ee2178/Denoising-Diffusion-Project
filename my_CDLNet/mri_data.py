@@ -118,7 +118,7 @@ def save_volume(kspace, volume, smaps, dir, name, target_dir):
     elif dir.endswith('test'):
         split = 'test'
     destination = os.path.join(target_dir, split, name +'.h5')
-    with h5py.File(filename, 'w') as f:
+    with h5py.File(destination, 'w') as f:
         f.create_dataset('kspace', data=volume_kspace.numpy())
         f.create_dataset('image', data=volume_combined.numpy())
         f.create_dataset('smaps', data=smaps.numpy())
