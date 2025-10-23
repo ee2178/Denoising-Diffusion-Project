@@ -120,7 +120,12 @@ class CDLNet(nn.Module):
         self.t.clamp_(0.0) 
         for k in range(self.K):
             self.A[k].weight.data = uball_project(self.A[k].weight.data)
-            self.B[k].weight.data = uball_project(self.B[k].weight.data)
+            # Since the weight filters in our B's are separated into real and imag parts, we need to combine them and then uball project
+            B_weights_complex = torch.complex(self.B[k].conv_real.weight.data, self.B[k].conv_imag.weight.data)
+            B_weights_complex = uball_project(B_weights_complex)
+            # Write them to our filters separately
+            self.B[k].conv_real.weight.data = torch.real(B_weights_complex)
+            self.B[k].conv_imag.weight.data = torch.imag(B_weights_complex)
         
     def forward(self, y, sigma = None, mask = 1):
         # mean subtraction and stride padding 
