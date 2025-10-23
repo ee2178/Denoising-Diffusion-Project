@@ -6,7 +6,7 @@
 	"M": 169,
 	"C": 1,
 	"P": 7,
-	"s": 2
+	"s": 1
 },
 "paths": {
 	"save": "trained_nets/CDLNet-s2030",

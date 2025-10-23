@@ -65,7 +65,7 @@ class CDLNet(nn.Module):
         # Initialize A, B, D, t
         
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
-        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)*s//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
+        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
         self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, bias=False) for _ in range(K)])
         
