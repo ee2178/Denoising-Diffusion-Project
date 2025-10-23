@@ -16,6 +16,40 @@ def ST(x, t):
     # Change sign to sgn to handle complex valued inputs
     return x.sgn()*nn.functional.relu(x.abs() - t)
 
+class ComplexConvTranspose2d(nn.Module):
+    def __init__(self,  M, 
+                        C, 
+                        P, 
+                        stride = 1, 
+                        bias=False):
+        self.M = M
+        self.C = C
+        self.P = P
+        self.s = stride
+        self.bias = bias
+        self.padding=(P-1)//2
+        
+        # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
+        self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=(P-1)//2, bias=False)
+        self.conv_imag = nn.ConvTranspose2d(M, C, P, stride = stride, padding=(P-1)//2, bias=False)
+        
+    def __call__(self, x):
+        # Assume x is a complex valued input
+        x_real = torch.real(x)
+        x_imag = torch.imag(x)
+        out_real_part1 = self.conv_real(x_real) # W_real * x_real
+        out_real_part2 = self.conv_imag(x_imag) # W_imag * x_imag
+        out_imag_part1 = self.conv_real(x_imag) # W_real * x_imag
+        out_imag_part2 = self.conv_imag(x_real) # W_imag * x_real
+
+        # Combine results to form the complex output
+        out_real = out_real_part1 - out_real_part2
+        out_imag = out_imag_part1 + out_imag_part2
+        
+        out = torch.complex(out_real, out_imag)
+        return out
+        
+
 class CDLNet(nn.Module):
     def __init__(self,  K = 3, # number of CDL blocks
                         M = 64, # number of filters in each filter bank
@@ -32,7 +66,7 @@ class CDLNet(nn.Module):
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
         self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
-        self.B = nn.ModuleList([nn.ConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
+        self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2, bias=False) for _ in range(K)])
         
         # D is the convolutional dictionary
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0
@@ -44,7 +78,9 @@ class CDLNet(nn.Module):
         W = torch.randn(M, C, P, P, dtype = torch.cfloat)
         for k in range(K):
             self.A[k].weight.data = W.clone()
-            self.B[k].weight.data = W.clone()
+            # Have to initialize real and imaginary parts of transposed conv separately
+            self.B[k].conv_real.weight.data = torch.real(W).clone()
+            self.B[k].conv_imag.weight.data = torch.imag(W).clone()
     
         # Don't bother running code if initializing trained model from state-dict
         if init:
@@ -62,7 +98,8 @@ class CDLNet(nn.Module):
             # spectral normalization (note: D is alised to B[0]), i.e. divide by dominant singular value/sqrt of dominant eigenvalue
             for k in range(K):
                 self.A[k].weight.data /= np.sqrt(L)
-                self.B[k].weight.data /= np.sqrt(L)
+                self.B[k].conv_real.weight.data /= np.sqrt(L)
+                self.B[k].conv_imag.weight.data /= np.sqrt(L)
                 
         # set parameters
         self.K = K
@@ -114,6 +151,7 @@ class CDLNet(nn.Module):
         xphat = self.D(z)
         xhat  = post_process(xphat, params)
         yield xhat
+        
 
 
 # def ST(x, t):
