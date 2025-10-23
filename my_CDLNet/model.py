@@ -10,9 +10,11 @@ def ST(x, t):
     ''' 
     Define an element wise soft thresholding operator on x with threshold t
     
-    ST(x, t) = sign(x)*ReLU(|x|-t)
+    ST(x, t) = sgn(x)*ReLU(|x|-t)
     '''
-    return x.sign()*nn.functional.relu(x.abs() - t)
+
+    # Change sign to sgn to handle complex valued inputs
+    return x.sgn()*nn.functional.relu(x.abs() - t)
 
 class CDLNet(nn.Module):
     def __init__(self,  K = 3, # number of CDL blocks
@@ -28,9 +30,9 @@ class CDLNet(nn.Module):
         # Initialize A, B, D, t
         
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
-        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False) for _ in range(K)])
+        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
-        self.B = nn.ModuleList([nn.ConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2, bias=False) for _ in range(K)])
+        self.B = nn.ModuleList([nn.ConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         
         # D is the convolutional dictionary
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0

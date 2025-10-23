@@ -1,6 +1,7 @@
 from os import path, listdir
 from glob import glob
 from PIL import Image
+import h5py
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -17,14 +18,21 @@ class MyDataset(data.Dataset):
 		for cur_path in root_dirs:
 			self.image_paths += [path.join(cur_path, file) \
 				for file in listdir(cur_path) \
-				if file.endswith(('tif','tiff','png','jpg','jpeg','bmp'))]
+				if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5'))]
 
 		print(f"Loading {root_dirs}:")
 		for i in tqdm(range(len(self.image_paths))):
 			if load_color:
 				self.image_list.append(Image.open(self.image_paths[i]))
 			else:
-				self.image_list.append(Image.open(self.image_paths[i]).convert('L'))
+				image_volume = h5py.File(self.image_paths[i])['image']
+				# Get number of slices in the image volume
+				num_slices = image_volume.shape[0]
+				# Pick a random number between 2 and num_slices - 2
+				idx = (num_slices-4) * torch.rand(1) + num_slices/2
+				idx = round(idx[0].numpy())
+				image = image_volume[idx, :, :, :]
+				self.image_list.append(image)
 
 		self.root_dirs = root_dirs
 		self.transform = transform
@@ -33,7 +41,11 @@ class MyDataset(data.Dataset):
 		return len(self.image_paths)
 
 	def __getitem__(self, idx):
-		return self.transform(self.image_list[idx])
+		# Image is a complex tensor, apply transformations to real and imaginary parts
+		image_real = torch.real(self.image_list[idx])
+		image_imag = torch.imag(self.image_list[idx])
+		image_real, image_imag = self.transform([image_real, image_imag])
+		return self.complex(image_real, image_imag)
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True):
     # Don't perform random transformations if in test phase
