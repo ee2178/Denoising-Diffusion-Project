@@ -47,7 +47,7 @@ class MRIDataset(data.Dataset):
 		slice = np.random.randint(self.start_slice, self.end_slice)
 		image = self.image_list[idx][slice, :, :]
         # Convert image to tensor
-        image = torch.from_numpy(image)
+		image = torch.from_numpy(image)
 		# Image is a complex tensor, apply transformations to real and imaginary parts
 		image_real = torch.real(image)
 		image_imag = torch.imag(image)
