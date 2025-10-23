@@ -28,11 +28,11 @@ class ComplexConvTranspose2d(nn.Module):
         self.P = P
         self.s = stride
         self.bias = bias
-        self.padding=(P-1)//2
+        self.padding=(P-1)*stride//2
         
         # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
-        self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=(P-1)//2, bias=False)
-        self.conv_imag = nn.ConvTranspose2d(M, C, P, stride = stride, padding=(P-1)//2, bias=False)
+        self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, bias=False, dtype = torch.float64)
+        self.conv_imag = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, bias=False, dtype = torch.float64)
         
     def __call__(self, x):
         # Assume x is a complex valued input
@@ -65,9 +65,9 @@ class CDLNet(nn.Module):
         # Initialize A, B, D, t
         
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
-        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
+        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)*s//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
-        self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2, bias=False) for _ in range(K)])
+        self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, bias=False) for _ in range(K)])
         
         # D is the convolutional dictionary
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0
@@ -92,15 +92,15 @@ class CDLNet(nn.Module):
                 L = power_method(DDt, torch.rand(1,C,128,128, dtype = torch.cfloat), num_iter=200, verbose=False)[0]
                 print(f"Done. L={L:.3e}.")
 
-                if L < 0:
+                if np.abs(L)  < 0:
                     print("STOP: something is very very wrong...")
                     sys.exit()
 
             # spectral normalization (note: D is alised to B[0]), i.e. divide by dominant singular value/sqrt of dominant eigenvalue
             for k in range(K):
-                self.A[k].weight.data /= np.sqrt(L)
-                self.B[k].conv_real.weight.data /= np.sqrt(L)
-                self.B[k].conv_imag.weight.data /= np.sqrt(L)
+                self.A[k].weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_real.weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_imag.weight.data /= np.sqrt(np.abs(L))
                 
         # set parameters
         self.K = K
@@ -128,7 +128,6 @@ class CDLNet(nn.Module):
         
         # Threshold scale factor
         c = 0 if sigma is None or not self.adaptive else sigma/255.0
-        
         # Perform K ISTA iterations
         # Initialize zp:
         # z_next = ST(z - A^T(Bz-y), thresh), but first z_0 = 0
