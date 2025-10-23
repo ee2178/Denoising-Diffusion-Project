@@ -45,7 +45,7 @@ class MRIDataset(data.Dataset):
 	def __getitem__(self, idx):
 		# Get a random slice from your volume, starting at start_slice, ending at end_slice
 		slice = np.random.randint(self.start_slice, self.end_slice)
-		image = self.image_list[idx][slice, :, :][np.newaxis, :, :]
+		image = self.image_list[idx][slice, :, :][:, :, np.newaxis]
         # Convert image to tensor
 		# image = torch.from_numpy(image)
 		# Image is a complex tensor, apply transformations to real and imaginary parts
@@ -54,9 +54,9 @@ class MRIDataset(data.Dataset):
 		# # Need to apply same transform to both real and imaginary part
 		# t = self.transform
 		# image_real, image_imag = self.transform([image_real, image_imag])
-		print(image.shape)
+		image_two_channel = np.concatenate((np.real(image), np.imag(image)), axis = 2)
         # return self.complex(image_real, image_imag)
-		return self.transform(image)
+		return self.transform(image_two_channel)
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8):
     # Don't perform random transformations if in test phase

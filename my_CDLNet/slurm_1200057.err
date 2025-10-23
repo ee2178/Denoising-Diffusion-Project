@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 10, in <module>
-    from data import get_fit_loaders
-  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/data.py", line 57
-    print(image.shape)
-TabError: inconsistent use of tabs and spaces in indentation
