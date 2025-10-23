@@ -53,7 +53,7 @@ class MRIDataset(data.Dataset):
         # We will assume input to already be a tensor:
 		if self.transform:
 			image_transform = self.transform(image_two_channel)
-			image_out = self.complex(image_transform[0, :, :], image_transform[1, :, :])
+			image_out = torch.complex(image_transform[0, :, :], image_transform[1, :, :])
 		else:
 			image_out = image[0, :, :]
 		return image_out

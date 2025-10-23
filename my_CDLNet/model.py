@@ -41,7 +41,7 @@ class CDLNet(nn.Module):
         self.t = nn.Parameter(t0*torch.ones(K, 2, M, 1, 1))
     
         # weight initialization (important! must initialize weights same weights for A and B)
-        W = torch.randn(M, C, P, P)
+        W = torch.randn(M, C, P, P, dtype = torch.cfloat)
         for k in range(K):
             self.A[k].weight.data = W.clone()
             self.B[k].weight.data = W.clone()
@@ -52,7 +52,7 @@ class CDLNet(nn.Module):
             with torch.no_grad():
                 DDt = lambda x: self.D(self.A[0](x))
                 # power method returns the dominant eigenvalue for a matrix 
-                L = power_method(DDt, torch.rand(1,C,128,128), num_iter=200, verbose=False)[0]
+                L = power_method(DDt, torch.rand(1,C,128,128, dtype = torch.cfloat), num_iter=200, verbose=False)[0]
                 print(f"Done. L={L:.3e}.")
 
                 if L < 0:
