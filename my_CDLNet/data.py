@@ -49,10 +49,15 @@ class MRIDataset(data.Dataset):
         # Convert image to tensor
 		image = torch.from_numpy(image)
 		# Image is a complex tensor, apply transformations to real and imaginary parts
-		image_real = torch.real(image)
-		image_imag = torch.imag(image)
-		image_real, image_imag = self.transform([image_real, image_imag])
-		return self.complex(image_real, image_imag)
+		# image_real = torch.real(image)
+		# image_imag = torch.imag(image)
+		# # Need to apply same transform to both real and imaginary part
+		# t = self.transform
+		# image_real, image_imag = self.transform([image_real, image_imag])
+		# return self.complex(image_real, image_imag)
+  
+  
+		return self.transform(image)
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8):
     # Don't perform random transformations if in test phase
