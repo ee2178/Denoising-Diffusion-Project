@@ -16,9 +16,9 @@
 	"loaders": {
 		"batch_size": 10,
 		"crop_size": 128,
-		"trn_path_list": ["../../datasets/fastmri/brain/multicoil_train"],
-		"val_path_list": ["../../datasets/fastmri/brain/multicoil_val"],
-		"tst_path_list": ["../../datasets/fastmri/brain/multicoil_test"],
+		"trn_path_list": ["../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train"],
+		"val_path_list": ["../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val"],
+		"tst_path_list": ["../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test"],
 		"load_color": false,
 		"start_slice": 0,
 		"end_slice": 8

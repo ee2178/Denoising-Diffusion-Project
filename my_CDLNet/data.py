@@ -44,16 +44,17 @@ class MRIDataset(data.Dataset):
 
 	def __getitem__(self, idx):
 		# Get a random slice from your volume, starting at start_slice, ending at end_slice
-		slice = (self.end_slice-self.start_slice) * torch.rand(1) + (self.end_slice+self.start_slice)/2
-		slice = round(idx[0].numpy())
-		image = self.image_list[idx][slice, :, :, :]
+		slice = np.random.randint(self.start_slice, self.end_slice)
+		image = self.image_list[idx][slice, :, :]
+        # Convert image to tensor
+        image = torch.from_numpy(image)
 		# Image is a complex tensor, apply transformations to real and imaginary parts
 		image_real = torch.real(image)
 		image_imag = torch.imag(image)
 		image_real, image_imag = self.transform([image_real, image_imag])
 		return self.complex(image_real, image_imag)
 
-def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True):
+def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8):
     # Don't perform random transformations if in test phase
 	if test:
 		xfm = transforms.ToTensor()
@@ -63,7 +64,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
 		                          transforms.RandomVerticalFlip(),
 		                          transforms.ToTensor()])
 
-	return data.DataLoader(MRIDataset(dir_list, xfm, load_color),
+	return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice),
 	                       batch_size = batch_size,
 	                       drop_last  = (not test),
 	                       shuffle    = (not test))
