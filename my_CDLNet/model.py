@@ -22,6 +22,7 @@ class ComplexConvTranspose2d(nn.Module):
                         P, 
                         stride = 1, 
                         bias=False):
+        super(ComplexConvTranspose2d, self).__init__()
         self.M = M
         self.C = C
         self.P = P
