@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from model import CDLNet
 from train_utils import awgn
-from mri_data import get_fit_loaders
+from data import get_fit_loaders
 
 def main(args):
     """ Given argument dictionary, load data, initialize model, and fit model.

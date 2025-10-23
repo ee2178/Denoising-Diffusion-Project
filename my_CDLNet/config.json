@@ -19,7 +19,9 @@
 		"trn_path_list": ["../../datasets/fastmri/brain/multicoil_train"],
 		"val_path_list": ["../../datasets/fastmri/brain/multicoil_val"],
 		"tst_path_list": ["../../datasets/fastmri/brain/multicoil_test"],
-		"load_color": false
+		"load_color": false,
+		"start_slice": 0,
+		"end_slice": 8
 	},
 	"fit": {
 		"epochs": 6000,

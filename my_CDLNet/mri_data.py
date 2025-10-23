@@ -91,23 +91,6 @@ def crop_center_kspace(kspace, crop_size):
     return out
 
 def save_volume(kspace, image, smaps, dir, name, target_dir):
-	# Iterate through each slice and save complex valued tensor
-	# Assume dir is B x H x W
-	# for i in range(volume.shape[0]):
-	# 	slice = volume[i, :, :]
-	# 	# Get filename without h5 extension
-	# 	name = os.path.splitext(name)[0]
-	# 	# Save complex tensor 
-	# 	if dir.endswith('train'):
-	# 		split = 'train'
-	# 	elif dir.endswith('val'):
-	# 		split = 'val'
-	# 	elif dir.endswith('test'):
-	# 		split = 'test'
-	# 	destination = os.path.join(target_dir, split, name + 'slice_'+ str(i) +'.pt')
-	# 	torch.save(slice, destination)
-
-
     # Save data as hdf5 format as a whole volume
     # Construct the dataset
 	# Need to reset indentations

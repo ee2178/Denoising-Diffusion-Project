@@ -10,10 +10,12 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from tqdm import tqdm
 
-class MyDataset(data.Dataset):
-	def __init__(self, root_dirs, transform, load_color=False):
+class MRIDataset(data.Dataset):
+	def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8):
 		self.image_paths = []
 		self.image_list = []
+		self.start_slice = start_slice
+		self.end_slice = end_slice
 
 		for cur_path in root_dirs:
 			self.image_paths += [path.join(cur_path, file) \
@@ -26,13 +28,13 @@ class MyDataset(data.Dataset):
 				self.image_list.append(Image.open(self.image_paths[i]))
 			else:
 				image_volume = h5py.File(self.image_paths[i])['image']
-				# Get number of slices in the image volume
-				num_slices = image_volume.shape[0]
-				# Pick a random number between 2 and num_slices - 2
-				idx = (num_slices-4) * torch.rand(1) + num_slices/2
-				idx = round(idx[0].numpy())
-				image = image_volume[idx, :, :, :]
-				self.image_list.append(image)
+				# # Get number of slices in the image volume
+				# num_slices = image_volume.shape[0]
+				# # Pick a random number between 2 and num_slices - 2
+				# idx = (num_slices-4) * torch.rand(1) + num_slices/2
+				# idx = round(idx[0].numpy())
+				# image = image_volume[idx, :, :, :]
+				self.image_list.append(image_volume)
 
 		self.root_dirs = root_dirs
 		self.transform = transform
@@ -41,9 +43,13 @@ class MyDataset(data.Dataset):
 		return len(self.image_paths)
 
 	def __getitem__(self, idx):
+		# Get a random slice from your volume, starting at start_slice, ending at end_slice
+		slice = (self.end_slice-self.start_slice) * torch.rand(1) + (self.end_slice+self.start_slice)/2
+		slice = round(idx[0].numpy())
+		image = self.image_list[idx][slice, :, :, :]
 		# Image is a complex tensor, apply transformations to real and imaginary parts
-		image_real = torch.real(self.image_list[idx])
-		image_imag = torch.imag(self.image_list[idx])
+		image_real = torch.real(image)
+		image_imag = torch.imag(image)
 		image_real, image_imag = self.transform([image_real, image_imag])
 		return self.complex(image_real, image_imag)
 
@@ -57,7 +63,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
 		                          transforms.RandomVerticalFlip(),
 		                          transforms.ToTensor()])
 
-	return data.DataLoader(MyDataset(dir_list, xfm, load_color),
+	return data.DataLoader(MRIDataset(dir_list, xfm, load_color),
 	                       batch_size = batch_size,
 	                       drop_last  = (not test),
 	                       shuffle    = (not test))
@@ -67,7 +73,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
 	              tst_path_list=['CBSD68'],
 	              crop_size  = 128,
 	              batch_size = [10,1,1],
-	              load_color = False):
+	              load_color = False, 
+               	  start_slice = 0, 
+                  end_slice = 8):
 
 	if type(batch_size) is int:
 		batch_size = [batch_size, 1, 1]
@@ -76,13 +84,19 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                           batch_size[0], 
                                           load_color, 
                                           crop_size=crop_size, 
-                                          test=False),
+                                          test=False, 
+                                          start_slice = start_slice, 
+                                          end_slice = end_slice),
 	               'val':   get_data_loader(val_path_list, 
                                           batch_size[1], 
                                           load_color, 
-                                          test=True),
+                                          test=True, 
+                                          start_slice = start_slice, 
+                                          end_slice = end_slice),
 	               'test':  get_data_loader(tst_path_list, 
                                           batch_size[2], 
                                           load_color, 
-                                          test=True)}
+                                          test=True, 
+                                          start_slice = start_slice, 
+                                          end_slice = end_slice)}
 	return dataloaders
