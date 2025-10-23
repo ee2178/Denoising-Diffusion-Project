@@ -28,7 +28,7 @@ class ComplexConvTranspose2d(nn.Module):
         self.P = P
         self.s = stride
         self.bias = bias
-        self.padding=(P-1)*stride//2
+        self.padding=((P-1)*stride -stride + 1)//2
         
         # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
         self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, bias=False, dtype = torch.float64)
