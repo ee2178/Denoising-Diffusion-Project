@@ -96,10 +96,10 @@ def fit(net, opt, loaders,
                         batch_hat_b, _ = net(obsrv_batch.clone() + h*b, sigma_n, mask=mask)
                         # assume you have a good estimator for sigma_n
                         div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
-                        loss = torch.mean((obsrv_batch - batch_hat)**2) + div
+                        loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
                     else:
                         # if not mcsure then mse 
-                        loss = torch.mean((batch - batch_hat)**2)
+                        loss = torch.mean(torch.abs(batch - batch_hat)**2)
 
                     if phase == 'train':
                         # Get gradients
