@@ -11,7 +11,7 @@ def power_method(A, b, num_iter=1000, tol=1e-6, verbose=True):
 	for it in range(num_iter):
 		b = A(b)
 		b = b / torch.norm(b)
-		eig_max = torch.sum(b*A(b))
+		eig_max = torch.sum(b.conj()*A(b))
 		if verbose:
 			print('i:{0:3d} \t |e_new - e_old|:{1:2.2e}'.format(it,abs(eig_max-eig_old).item()))
 		if abs(eig_max-eig_old)<tol:

@@ -2,8 +2,8 @@
 "type": "CDLNet",
 "model": {
 	"adaptive": true,
-	"K": 30,
-	"M": 169,
+	"K": 20,
+	"M": 32,
 	"C": 1,
 	"P": 7,
 	"s": 1

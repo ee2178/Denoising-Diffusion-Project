@@ -57,7 +57,7 @@ class MRIDataset(data.Dataset):
 		else:
 			image_out = image[0, :, :]
 		# Scale the image nicely
-		image_out = image_out / torch.norm(image_out)**2
+		image_out = image_out / torch.norm(image_out)
 		return image_out
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8):
