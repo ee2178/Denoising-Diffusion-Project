@@ -36,7 +36,7 @@ def fit(net, opt, loaders,
         save_dir = None, 
         start_epoch = 1,
         clip_grad = 1,
-        noise_std = 25,
+        noise_std = 5,
         demosaic = False, 
         verbose = True, 
         val_freq = 1,
@@ -175,7 +175,7 @@ def grad_norm(params):
     for p in params:
         param_norm = torch.tensor(0)
         if p.grad is not None:
-            param_norm = p.grad.data.norm(2)
+            param_norm = p.grad.data.abs().norm(2)
         total_norm = total_norm + param_norm.item()**2
     return total_norm**(.5)
 
