@@ -67,7 +67,7 @@ class CDLNet(nn.Module):
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
         self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
-        self.B = nn.ModuleList([nn.ConvTranspose2d(M, C, P, stride = s, padding=(P-1)//2,  bias=False) for _ in range(K)])
+        self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, bias=False) for _ in range(K)])
         
         # D is the convolutional dictionary
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0
@@ -80,7 +80,9 @@ class CDLNet(nn.Module):
         for k in range(K):
             self.A[k].weight.data = W.clone()
             # Have to initialize real and imaginary parts of transposed conv separately
-            self.B[k].weight.data = W.conj().clone()
+            # self.B[k].weight.data = W.conj().clone()
+            self.B[k].conv_real.data = torch.real(W).clone()
+            self.B[k].conv_imag.data = -1*torch.imag(W).clone()
     
         # Don't bother running code if initializing trained model from state-dict
         if init:
@@ -98,7 +100,8 @@ class CDLNet(nn.Module):
             # spectral normalization (note: D is alised to B[0]), i.e. divide by dominant singular value/sqrt of dominant eigenvalue
             for k in range(K):
                 self.A[k].weight.data /= np.sqrt(np.abs(L))
-                self.B[k].weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_real.weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_imag.weight.data /= np.sqrt(np.abs(L))
                 
         # set parameters
         self.K = K
@@ -118,12 +121,13 @@ class CDLNet(nn.Module):
         self.t.clamp_(0.0) 
         for k in range(self.K):
             self.A[k].weight.data = uball_project(self.A[k].weight.data)
-            self.B[k].weight.data = uball_project(self.B[k].weight.data)# Since the weight filters in our B's are separated into real and imag parts, we need to combine them and then uball project
-            # B_weights_complex = torch.complex(self.B[k].conv_real.weight.data, self.B[k].conv_imag.weight.data)
-            # B_weights_complex = uball_project(B_weights_complex)
+            # self.B[k].weight.data = uball_project(self.B[k].weight.data)
+            # Since the weight filters in our B's are separated into real and imag parts, we need to combine them and then uball project
+            B_weights_complex = torch.complex(self.B[k].conv_real.weight.data, self.B[k].conv_imag.weight.data)
+            B_weights_complex = uball_project(B_weights_complex)
             # Write them to our filters separately
-            # self.B[k].conv_real.weight.data = torch.real(B_weights_complex)
-            # self.B[k].conv_imag.weight.data = torch.imag(B_weights_complex)
+            self.B[k].conv_real.weight.data = torch.real(B_weights_complex)
+            self.B[k].conv_imag.weight.data = torch.imag(B_weights_complex)
         
     def forward(self, y, sigma = None, mask = 1):
         # mean subtraction and stride padding 
