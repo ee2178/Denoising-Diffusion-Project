@@ -44,7 +44,7 @@ def pre_process(x, stride, mask=1):
     x = mask*(x - xmean)
     params.append(xmean)
     # Scale to max of 1
-    x_max = torch.max(x.abs)
+    x_max = torch.max(x.abs())
     params.append(x_max)
     x = x / x_max
     # pad signal for stride

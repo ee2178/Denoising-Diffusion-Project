@@ -81,8 +81,8 @@ class CDLNet(nn.Module):
             self.A[k].weight.data = W.clone()
             # Have to initialize real and imaginary parts of transposed conv separately
             # self.B[k].weight.data = W.conj().clone()
-            self.B[k].conv_real.data = torch.real(W).clone()
-            self.B[k].conv_imag.data = -1*torch.imag(W).clone()
+            self.B[k].conv_real.weight.data = torch.real(W).clone()
+            self.B[k].conv_imag.weight.data = -1*torch.imag(W).clone()
     
         # Don't bother running code if initializing trained model from state-dict
         if init:
@@ -90,7 +90,7 @@ class CDLNet(nn.Module):
             with torch.no_grad():
                 DDt = lambda x: self.D(self.A[0](x))
                 # power method returns the dominant eigenvalue for a matrix 
-                L = power_method(DDt, torch.rand(1,C,128,128, dtype = torch.cfloat).to(device), num_iter=200, verbose=False)[0]
+                L = power_method(DDt, torch.rand(1,C,128,128, dtype = torch.cfloat), num_iter=200, verbose=False)[0]
                 print(f"Done. L={L:.3e}.")
 
                 if np.abs(L)  < 0:

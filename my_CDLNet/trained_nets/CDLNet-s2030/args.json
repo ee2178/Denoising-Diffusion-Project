@@ -29,15 +29,17 @@
         "loaders": {
             "batch_size": 10,
             "crop_size": 128,
+            "end_slice": 8,
             "load_color": false,
+            "start_slice": 0,
             "trn_path_list": [
-                "dataset/CBSD432"
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train"
             ],
             "tst_path_list": [
-                "dataset/CBSD68"
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test"
             ],
             "val_path_list": [
-                "dataset/Kodak"
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val"
             ]
         },
         "opt": {
