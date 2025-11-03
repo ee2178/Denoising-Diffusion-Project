@@ -21,7 +21,8 @@
 		"tst_path_list": ["../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test"],
 		"load_color": false,
 		"start_slice": 0,
-		"end_slice": 8
+		"end_slice": 8,
+        "scaling_fac":1e5
 	},
 	"fit": {
 		"epochs": 6000,

@@ -44,9 +44,9 @@ def pre_process(x, stride, mask=1):
     x = mask*(x - xmean)
     params.append(xmean)
     # Scale to max of 1
-    x_max = torch.max(x.abs())
-    params.append(x_max)
-    x = x / x_max
+    #x_max = torch.max(x.abs())
+    #params.append(x_max)
+    #x = x / x_max
     # pad signal for stride
     pad = calc_pad_2D(*x.shape[2:], stride)
     x = F.pad(x, pad, mode='reflect')
@@ -62,8 +62,8 @@ def post_process(x, params):
     pad = params.pop()
     x = unpad(x, pad)
     # Scale image back to original 
-    xmax = params.pop()
-    x = x*xmax
+    #xmax = params.pop()
+    #x = x*xmax
     # add mean
     xmean = params.pop()
     x = x + xmean
