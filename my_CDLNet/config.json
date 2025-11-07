@@ -2,15 +2,15 @@
 "type": "CDLNet",
 "model": {
 	"adaptive": true,
-	"K": 20,
-	"M": 32,
+	"K": 30,
+	"M": 169,
 	"C": 1,
 	"P": 7,
-	"s": 1
+	"s": 2
 },
 "paths": {
 	"save": "trained_nets/CDLNet-s2030",
-	"ckpt": null
+	"ckpt": "trained_nets/CDLNet-s2030/0.ckpt"
 },
 "train": {
 	"loaders": {
@@ -22,7 +22,7 @@
 		"load_color": false,
 		"start_slice": 0,
 		"end_slice": 8,
-        "scaling_fac":1e5
+        "scaling_fac":1e6
 	},
 	"fit": {
 		"epochs": 6000,

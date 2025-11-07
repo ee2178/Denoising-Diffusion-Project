@@ -82,6 +82,7 @@ def test(net, loader, noise_level=25, blind=False, device=torch.device('cpu')):
         psnr = 0
         for itern, x in enumerate(t):
             x = x.to(device)
+            x = x[None, :, :, :]
             mask = utils.gen_bayer_mask(x) if ARGS.demosaic else 1
             y, s = utils.awgn(x, sigma)
             y = mask*y
@@ -94,7 +95,9 @@ def test(net, loader, noise_level=25, blind=False, device=torch.device('cpu')):
             else:
                 s = None
             xhat, _ = net(y, s, mask=mask)
-            psnr = psnr + -10*np.log10(torch.mean((x-xhat)**2).item())
+            breakpoint()
+            psnr = psnr + -10*np.log10(torch.mean((x[:, :, 0:xhat.shape[2], 0:xhat.shape[3]]-xhat).abs()**2).item())
+
         psnr = psnr / (itern+1)
         print(f"PSNR = {psnr:.3f}")
 

@@ -28,7 +28,7 @@ class ComplexConvTranspose2d(nn.Module):
         self.P = P
         self.s = stride
         self.bias = bias
-        self.padding=((P-1)*stride -stride + 1)//2
+        self.padding=(P-1)//2
         
         # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
         self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, bias=False, dtype = torch.float64)
@@ -138,9 +138,11 @@ class CDLNet(nn.Module):
         # Perform K ISTA iterations
         # Initialize zp:
         # z_next = ST(z - A^T(Bz-y), thresh), but first z_0 = 0
-        z = ST(self.A[0](yp), self.t[0,:1] + c*self.t[0,1:2])
+        temp = self.A[0](yp)
+        z = ST(temp, self.t[0,:1] + c*self.t[0,1:2])
         for k in range(self.K):
-            z = ST(z - self.A[k](mask*self.B[k](z)-yp), self.t[k, 0:1] + c * self.t[k, 1:2])
+            temp = mask* self.B[k](z)
+            z = ST(z - self.A[k](temp-yp[:, :, 0:temp.shape[2], 0:temp.shape[3]]), self.t[k, 0:1] + c * self.t[k, 1:2])
         
         # x_hat = Dz
         x_hat = post_process(self.D(z), params)
