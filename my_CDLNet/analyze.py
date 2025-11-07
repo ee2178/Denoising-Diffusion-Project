@@ -259,6 +259,14 @@ def passthrough(net, img_path, noise_std, device=torch.device('cpu'), blind=Fals
     save_image(torch.cat([y, xhat, x]), fn, nrow=3, scale_each=False, normalize=False)
     print("done.")
 
+def saveimg(x, name):
+    # Helper function to images
+    # get abs value
+    x = torch.squeeze(x.abs()).detach().cpu()
+    plt.imshow(x, cmap = 'gray')
+    plt.axis('off')
+    plt.savefig(name)
+
 if __name__ == "__main__":
     """ Load arguments from json file and command line and pass to main.
     """
