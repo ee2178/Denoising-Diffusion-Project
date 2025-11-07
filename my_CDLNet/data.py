@@ -60,7 +60,6 @@ class MRIDataset(data.Dataset):
             image_out = torch.complex(image_transform[0, :, :], image_transform[1, :, :])*self.scaling_fac
         else:
             image_out = image[0, :, :] * self.scaling_fac
-        breakpoint()
         return image_out
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6):
@@ -72,6 +71,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
                                   transforms.RandomHorizontalFlip(),
                                   transforms.RandomVerticalFlip(),
                                   ])
+        # xfm = None
 
     return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac),
                            batch_size = batch_size,

@@ -99,7 +99,7 @@ def fit(net, opt, loaders,
                         loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
                     else:
                         # if not mcsure then mse 
-                        breakpoint()
+                        
                         loss = torch.mean(torch.abs(batch[:, :, 0:batch_hat.shape[2], 0:batch_hat.shape[3]] - batch_hat)**2)
                         
                     if phase == 'train':
@@ -118,7 +118,7 @@ def fit(net, opt, loaders,
                     total_norm = grad_norm(net.parameters())
                     t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
                 psnr = psnr - 10*np.log10(loss)
-
+            breakpoint()
             psnr = psnr/(itern+1)
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
 
