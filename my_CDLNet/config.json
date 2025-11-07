@@ -22,7 +22,7 @@
 		"load_color": false,
 		"start_slice": 0,
 		"end_slice": 8,
-        "scaling_fac":5e10
+        "scaling_fac":1e6
 	},
 	"fit": {
 		"epochs": 6000,
