@@ -10,7 +10,7 @@
 },
 "paths": {
 	"save": "trained_nets/CDLNet-s2030",
-	"ckpt": "trained_nets/CDLNet-s2030/0.ckpt"
+	"ckpt": "trained_nets/CDLNet-s2030/net.ckpt"
 },
 "train": {
 	"loaders": {

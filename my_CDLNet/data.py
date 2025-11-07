@@ -11,7 +11,7 @@ import torchvision.transforms.functional as F
 from tqdm import tqdm
 
 class MRIDataset(data.Dataset):
-    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e5):
+    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e6):
         self.image_paths = []
         self.image_list = []
         self.start_slice = start_slice
