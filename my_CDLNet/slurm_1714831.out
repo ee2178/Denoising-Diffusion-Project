@@ -348,3 +348,4 @@ TRAIN PSNR: 43.962 dB
 TRAIN PSNR: 43.935 dB
 TRAIN PSNR: 43.994 dB
 Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.965 dB
