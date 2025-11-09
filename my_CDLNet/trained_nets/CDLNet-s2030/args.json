@@ -28,10 +28,10 @@
         },
         "loaders": {
             "batch_size": 10,
-            "crop_size": 128,
+            "crop_size": 256,
             "end_slice": 8,
             "load_color": false,
-            "scaling_fac": 1000000000.0,
+            "scaling_fac": 1000000.0,
             "start_slice": 0,
             "trn_path_list": [
                 "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train"

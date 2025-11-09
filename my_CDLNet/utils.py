@@ -1,4 +1,5 @@
 import torch
+import matplotlib.pyplot as plt
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
 
@@ -35,3 +36,10 @@ def awgn(input, noise_std):
 		       (noise_std[1] - noise_std[0])*torch.rand(len(input),1,1,1, device=input.device)
 	return input + torch.randn_like(input) * (sigma/255), sigma
 
+def saveimg(x, name):
+    # Helper function to images
+    # get abs value
+    x = torch.squeeze(x.abs()).detach().cpu()
+    plt.imshow(x, cmap = 'gray')
+    plt.axis('off')
+    plt.savefig(name)

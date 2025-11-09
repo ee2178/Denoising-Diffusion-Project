@@ -118,7 +118,7 @@ def fit(net, opt, loaders,
                     total_norm = grad_norm(net.parameters())
                     t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
                 psnr = psnr - 10*np.log10(loss)
-            breakpoint()
+            
             psnr = psnr/(itern+1)
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
 

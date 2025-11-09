@@ -4,6 +4,8 @@ import numpy as np
 import os
 import h5py
 import argparse
+from utils import saveimg
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--train", type=str, help="Run preprocessing over specified training set (provided path to image dir).", default=None)
 parser.add_argument("--val", type=str, help="Run preprocessing over specified validation set (provided path to image dir).", default=None)
@@ -125,10 +127,11 @@ def main(dirs, target_dir):
                     volume_kspace = volume_kspace.to(device)
                     # Get kspace centers
                     volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
-                    volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace_centers))
+                    volume_img_centers = torch.fft.fftshift(torch.fft.ifft2(volume_kspace))
                     smaps = walsh_smaps(volume_img_centers)
                     # Apply sensitivity maps and then sum
                     volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img_centers, smaps)
+                    breakpoint()
                     # Save each slice individually
                     save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
     return None

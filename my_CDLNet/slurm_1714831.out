@@ -1,0 +1,348 @@
+{'model': {'C': 1, 'K': 30, 'M': 169, 'P': 7, 'adaptive': True, 's': 2},
+ 'paths': {'ckpt': None, 'save': 'trained_nets/CDLNet-s2030'},
+ 'train': {'fit': {'backtrack_thresh': 2,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'epochs': 6000,
+                   'mcsure': False,
+                   'noise_std': [20, 30],
+                   'save_freq': 5,
+                   'val_freq': 50,
+                   'verbose': True},
+           'loaders': {'batch_size': 10,
+                       'crop_size': 256,
+                       'end_slice': 8,
+                       'load_color': False,
+                       'scaling_fac': 1000000.0,
+                       'start_slice': 0,
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']},
+           'opt': {'lr': 0.001},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'CDLNet'}
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train']:
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']:
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test']:
+Running power-method on initial dictionary...
+Done. L=3.549e+03+7.502e-07j.
+Current Learning Rate(s):
+0.001
+Total Number of Parameters: 755,430
+Using trained_nets/CDLNet-s2030 ...
+fit: using device cuda:0
+TRAIN PSNR: 32.361 dB
+TRAIN PSNR: 41.055 dB
+TRAIN PSNR: 41.388 dB
+TRAIN PSNR: 42.040 dB
+TRAIN PSNR: 42.291 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 42.456 dB
+TRAIN PSNR: 42.416 dB
+TRAIN PSNR: 42.752 dB
+TRAIN PSNR: 42.665 dB
+TRAIN PSNR: 42.683 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 42.535 dB
+TRAIN PSNR: 42.863 dB
+TRAIN PSNR: 42.920 dB
+TRAIN PSNR: 43.030 dB
+TRAIN PSNR: nan dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.0008]
+TRAIN PSNR: nan dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00064]
+TRAIN PSNR: 42.842 dB
+TRAIN PSNR: 43.009 dB
+TRAIN PSNR: 43.066 dB
+TRAIN PSNR: 42.984 dB
+TRAIN PSNR: 43.074 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.016 dB
+TRAIN PSNR: 43.047 dB
+TRAIN PSNR: 43.047 dB
+TRAIN PSNR: nan dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.000512]
+TRAIN PSNR: 43.015 dB
+TRAIN PSNR: 43.074 dB
+TRAIN PSNR: 42.886 dB
+TRAIN PSNR: 43.097 dB
+TRAIN PSNR: 43.139 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.239 dB
+TRAIN PSNR: 43.116 dB
+TRAIN PSNR: 43.213 dB
+TRAIN PSNR: 43.237 dB
+TRAIN PSNR: nan dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.0004096]
+TRAIN PSNR: 43.223 dB
+TRAIN PSNR: 43.202 dB
+TRAIN PSNR: 43.244 dB
+TRAIN PSNR: 43.030 dB
+TRAIN PSNR: 43.187 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.318 dB
+TRAIN PSNR: 43.230 dB
+TRAIN PSNR: 43.282 dB
+TRAIN PSNR: 43.351 dB
+TRAIN PSNR: nan dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00032768]
+TRAIN PSNR: 43.236 dB
+TRAIN PSNR: 43.390 dB
+TRAIN PSNR: 43.350 dB
+TRAIN PSNR: 43.282 dB
+TRAIN PSNR: 43.414 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.336 dB
+TRAIN PSNR: 43.362 dB
+TRAIN PSNR: 18.397 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00026214]
+TRAIN PSNR: 43.315 dB
+TRAIN PSNR: 43.517 dB
+TRAIN PSNR: 43.490 dB
+TRAIN PSNR: 43.411 dB
+TRAIN PSNR: 43.255 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.451 dB
+TRAIN PSNR: 43.455 dB
+TRAIN PSNR: 43.402 dB
+TRAIN PSNR: 43.417 dB
+TRAIN PSNR: 43.431 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.538 dB
+TRAIN PSNR: 43.603 dB
+TRAIN PSNR: 43.458 dB
+TRAIN PSNR: 39.146 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00020972]
+TRAIN PSNR: 43.518 dB
+TRAIN PSNR: 43.548 dB
+TRAIN PSNR: 43.525 dB
+TRAIN PSNR: 43.555 dB
+TRAIN PSNR: 43.594 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.617 dB
+TRAIN PSNR: 43.566 dB
+TRAIN PSNR: 43.643 dB
+TRAIN PSNR: 43.523 dB
+TRAIN PSNR: 43.647 dB
+VAL PSNR: 46.807 dB
+Updated Learning Rate(s): 
+[0.0001992294400000001]
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.617 dB
+TRAIN PSNR: 43.693 dB
+TRAIN PSNR: 43.569 dB
+TRAIN PSNR: 43.625 dB
+TRAIN PSNR: 43.609 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.618 dB
+TRAIN PSNR: 43.671 dB
+TRAIN PSNR: 43.708 dB
+TRAIN PSNR: 43.682 dB
+TRAIN PSNR: 43.695 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.754 dB
+TRAIN PSNR: 43.696 dB
+TRAIN PSNR: 43.640 dB
+TRAIN PSNR: 43.698 dB
+TRAIN PSNR: 43.822 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.734 dB
+TRAIN PSNR: 43.742 dB
+TRAIN PSNR: 43.737 dB
+TRAIN PSNR: 43.785 dB
+TRAIN PSNR: 43.879 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.828 dB
+TRAIN PSNR: 32.273 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00015938]
+TRAIN PSNR: 43.778 dB
+TRAIN PSNR: 43.792 dB
+TRAIN PSNR: 43.758 dB
+TRAIN PSNR: 43.749 dB
+TRAIN PSNR: 43.724 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 37.841 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [0.00012751]
+TRAIN PSNR: 43.787 dB
+TRAIN PSNR: 43.693 dB
+TRAIN PSNR: 43.711 dB
+TRAIN PSNR: 43.750 dB
+TRAIN PSNR: 43.840 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.834 dB
+TRAIN PSNR: 43.851 dB
+TRAIN PSNR: 43.792 dB
+TRAIN PSNR: 43.685 dB
+TRAIN PSNR: 43.806 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.810 dB
+TRAIN PSNR: 43.803 dB
+TRAIN PSNR: 43.835 dB
+TRAIN PSNR: 43.900 dB
+TRAIN PSNR: 43.838 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.848 dB
+TRAIN PSNR: 43.763 dB
+TRAIN PSNR: 43.759 dB
+TRAIN PSNR: 43.824 dB
+TRAIN PSNR: 43.872 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.912 dB
+TRAIN PSNR: 43.877 dB
+TRAIN PSNR: 43.796 dB
+TRAIN PSNR: 43.852 dB
+TRAIN PSNR: 43.808 dB
+VAL PSNR: 47.084 dB
+Updated Learning Rate(s): 
+[0.00012113149952000007]
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.879 dB
+TRAIN PSNR: 43.841 dB
+TRAIN PSNR: 43.876 dB
+TRAIN PSNR: 43.859 dB
+TRAIN PSNR: 43.786 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.811 dB
+TRAIN PSNR: 43.926 dB
+TRAIN PSNR: 43.825 dB
+TRAIN PSNR: 43.923 dB
+TRAIN PSNR: 43.860 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.841 dB
+TRAIN PSNR: 40.216 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [9.69051996e-05]
+TRAIN PSNR: 43.802 dB
+TRAIN PSNR: 43.819 dB
+TRAIN PSNR: 43.873 dB
+TRAIN PSNR: 43.872 dB
+TRAIN PSNR: 43.909 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.890 dB
+TRAIN PSNR: 43.845 dB
+TRAIN PSNR: 43.876 dB
+TRAIN PSNR: 43.906 dB
+TRAIN PSNR: 43.911 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.894 dB
+TRAIN PSNR: 43.924 dB
+TRAIN PSNR: 43.910 dB
+TRAIN PSNR: 43.803 dB
+TRAIN PSNR: 43.862 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.945 dB
+TRAIN PSNR: 43.909 dB
+TRAIN PSNR: 43.919 dB
+TRAIN PSNR: 43.937 dB
+TRAIN PSNR: 43.876 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.885 dB
+TRAIN PSNR: 43.914 dB
+TRAIN PSNR: 43.995 dB
+TRAIN PSNR: 43.860 dB
+TRAIN PSNR: 40.944 dB
+Loss has diverged. Backtracking to trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Updated Learning Rate(s): [7.75241597e-05]
+TRAIN PSNR: 43.919 dB
+TRAIN PSNR: 43.931 dB
+TRAIN PSNR: 43.922 dB
+TRAIN PSNR: 43.895 dB
+TRAIN PSNR: 43.995 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.925 dB
+TRAIN PSNR: 43.845 dB
+TRAIN PSNR: 43.905 dB
+TRAIN PSNR: 43.888 dB
+TRAIN PSNR: 43.893 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 44.000 dB
+TRAIN PSNR: 43.934 dB
+TRAIN PSNR: 43.890 dB
+TRAIN PSNR: 44.000 dB
+TRAIN PSNR: 43.840 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.922 dB
+TRAIN PSNR: 43.887 dB
+TRAIN PSNR: 43.855 dB
+TRAIN PSNR: 43.953 dB
+TRAIN PSNR: 43.971 dB
+VAL PSNR: 46.971 dB
+Updated Learning Rate(s): 
+[7.364795170816004e-05]
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.968 dB
+TRAIN PSNR: 43.910 dB
+TRAIN PSNR: 43.913 dB
+TRAIN PSNR: 43.884 dB
+TRAIN PSNR: 43.880 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.920 dB
+TRAIN PSNR: 43.919 dB
+TRAIN PSNR: 43.956 dB
+TRAIN PSNR: 44.005 dB
+TRAIN PSNR: 43.925 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.905 dB
+TRAIN PSNR: 43.887 dB
+TRAIN PSNR: 44.011 dB
+TRAIN PSNR: 43.956 dB
+TRAIN PSNR: 44.006 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.909 dB
+TRAIN PSNR: 43.937 dB
+TRAIN PSNR: 43.911 dB
+TRAIN PSNR: 43.889 dB
+TRAIN PSNR: 43.906 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 43.971 dB
+TRAIN PSNR: 43.996 dB
+TRAIN PSNR: 43.961 dB
+TRAIN PSNR: 43.939 dB
+TRAIN PSNR: 43.948 dB
+Checkpoint: trained_nets/CDLNet-s2030/net.ckpt
+TRAIN PSNR: 44.029 dB
+TRAIN PSNR: 43.990 dB
+TRAIN PSNR: 43.962 dB
+TRAIN PSNR: 43.935 dB
