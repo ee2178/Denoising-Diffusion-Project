@@ -62,7 +62,6 @@ def main(args):
 
     # Mask kspace
     kspace_masked = torch.einsum('jj, ijk -> ijk', mask, kspace)
-    breakpoint()
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps)
 
     breakpoint()
