@@ -53,20 +53,25 @@ def main(args):
     
     # Make an acceleration map
     mask, _ = make_acc_mask(shape = (smaps.shape[2], smaps.shape[2]), accel = 4, acs_lines = 24)
-    breakpoint()
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
     smaps = smaps / torch.norm(smaps, dim = (1, 2), keepdim = True)
     kspace = kspace.permute(0, 2, 1).to(device)*1e6
     mask = mask.to(device)
-    mri_recon, tol_reached = sense(kspace, mask, smaps)
+
+    # Mask kspace
+    kspace_masked = torch.einsum('jj, ijk -> ijk', mask, kspace)
+    breakpoint()
+    mri_recon, tol_reached = sense(kspace_masked, mask, smaps)
 
     breakpoint()
-    zero_filled_recon = mri_decoding(kspace, mask, smaps)
+    gnd_truth = mri_decoding(kspace, mask, smaps)
+    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
-
+    saveimg(gnd_truth, "gnd_truth.png")
+    
 if __name__ == "__main__":
     """ 
     Load arguments from json file and command line and pass to main.
