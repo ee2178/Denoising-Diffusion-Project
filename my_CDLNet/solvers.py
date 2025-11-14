@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 
-def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100):
+def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
     '''
     Let A be a Pytorch operator, necessarily symmetric, positive semi-definite
     We solve the system Ax = b
@@ -11,7 +11,6 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100):
         x0 = torch.zeros_like(b)
     # Compute first residual
     r = b - A(x0)
-    breakpoint()
     p = r
     x = x0
     tol_reached = False
@@ -23,11 +22,14 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100):
         x = x + alpha * p
         r_next = r - alpha * Ap
         r_norm = torch.norm(r, 2)
-        if r_norm <= tol:
+        r_diff = torch.abs(r_norm - torch.norm(r_next, 2))
+        breakpoint()
+        if r_diff <= tol:
             tol_reached = True
             return x, tol_reached
         beta = torch.sum(r_next.conj() *  r_next)/(torch.sum(r.conj() *  r) + 1e-8)
         p = r_next + beta * p
         r = r_next
-        print(f"Iteration: {k}, Residual: {r_norm}")
+        if verbose:
+            print(f"Iteration: {k}, Residual: {r_norm}")
     return x, tol_reached

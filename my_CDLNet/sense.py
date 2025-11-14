@@ -29,7 +29,7 @@ def sense(y, acceleration_map, smaps):
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e5)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 1e4)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -53,7 +53,9 @@ def main(args):
     
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
-    kspace = kspace.permute(0, 2, 1).to(device)*1e6
+    # Normalize smaps for SENSE
+    smaps = smaps / torch.norm(smaps, dim = (1, 2), keepdim = True)
+    kspace = kspace.permute(0, 2, 1).to(device)
     mask = mask.to(device)
     mri_recon, tol_reached = sense(kspace, mask, smaps)
 
