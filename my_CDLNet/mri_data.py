@@ -65,7 +65,7 @@ ARGS = parser.parse_args()
     smaps /= (norm.sqrt() + 1e-6)
 
     return smaps.conj()"""
-def walsh_smaps(y: torch.Tensor, ks: int = 7, stride: int = 2):
+def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     """
     Computes coil sensitivity maps using the Walsh method.
     Args:
@@ -106,8 +106,8 @@ def walsh_smaps(y: torch.Tensor, ks: int = 7, stride: int = 2):
     smaps_p = Q.permute(0, 2, 1).reshape(B, C, Hp, Wp)
 
     # Upsample to full size
-    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bicubic', align_corners=False)
-    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bicubic', align_corners=False)
+    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
+    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
     smaps = torch.complex(smaps_real, smaps_imag)
 
     # Normalize
@@ -154,7 +154,7 @@ def save_volume(kspace, image, smaps, dir, name, target_dir):
         split = 'test'
     destination = os.path.join(target_dir, split, name)
     with h5py.File(destination, 'w') as f:
-        f.create_dataset('kspace', data=kspace.cpu().numpy())
+        # f.create_dataset('kspace', data=kspace.cpu().numpy())
         f.create_dataset('image', data=image.cpu().numpy())
         f.create_dataset('smaps', data=smaps.cpu().numpy())
     return None
@@ -169,21 +169,20 @@ def main(dirs, target_dir):
 				# Only get T2 weighted brain 
                 if name.startswith('file_brain_AXT2'):
 					# Every file in these directories should be h5 files anyway
-                    hf = h5py.File(os.path.join(dir, name))
-                    volume_kspace = hf['kspace'][()]
-                    # Convert to pytorch tensor (complex valued)
-                    volume_kspace = torch.from_numpy(volume_kspace)
-                    # Put on GPU
-                    volume_kspace = volume_kspace.to(device)
-                    # Get kspace centers
-                    volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
-                    volume_img = torch.fft.fftshift(torch.fft.ifft2(volume_kspace))
-                    smaps = walsh_smaps(volume_img)
-                    # Apply sensitivity maps and then sum
-                    volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img, smaps)
-                    breakpoint()
-                    # Save each slice individually
-                    save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
+                    with h5py.File(os.path.join(dir, name)) as hf:
+                        volume_kspace = hf['kspace'][()]
+                        # Convert to pytorch tensor (complex valued)
+                        volume_kspace = torch.from_numpy(volume_kspace)
+                        # Put on GPU
+                        volume_kspace = volume_kspace.to(device)
+                        # Get kspace centers
+                        # volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
+                        volume_img = torch.fft.fftshift(torch.fft.ifft2(volume_kspace))
+                        smaps = walsh_smaps(volume_img)
+                        # Apply sensitivity maps and then sum
+                        volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img, smaps)
+                        # Save each slice individually
+                        save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
     return None
 
 

@@ -3,7 +3,7 @@
 #SBATCH --account=pr_198_general
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:rtx8000:1
+#SBATCH --gres=gpu:a100:1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=48GB
 #SBATCH --time=15:00:00

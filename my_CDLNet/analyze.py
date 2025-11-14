@@ -95,7 +95,7 @@ def test(net, loader, noise_level=25, blind=False, device=torch.device('cpu')):
             else:
                 s = None
             xhat, _ = net(y, s, mask=mask)
-            
+            breakpoint()
             psnr = psnr + -10*np.log10(torch.mean((x[:, :, 0:xhat.shape[2], 0:xhat.shape[3]]-xhat).abs()**2).item())
 
         psnr = psnr / (itern+1)
