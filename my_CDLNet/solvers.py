@@ -11,6 +11,7 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100):
         x0 = torch.zeros_like(b)
     # Compute first residual
     r = b - A(x0)
+    breakpoint()
     p = r
     x = x0
     tol_reached = False
@@ -28,6 +29,5 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100):
         beta = torch.sum(r_next.conj() *  r_next)/(torch.sum(r.conj() *  r) + 1e-8)
         p = r_next + beta * p
         r = r_next
-        breakpoint()
         print(f"Iteration: {k}, Residual: {r_norm}")
     return x, tol_reached
