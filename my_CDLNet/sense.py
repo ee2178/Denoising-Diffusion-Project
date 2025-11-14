@@ -5,7 +5,7 @@ import os
 import h5py
 
 from utils import saveimg
-from mri_utils import mri_encoding, mri_decoding, detect_acc_mask
+from mri_utils import mri_encoding, mri_decoding, detect_acc_mask, make_acc_mask
 from solvers import conj_grad
 from functools import partial
 
@@ -49,8 +49,11 @@ def main(args):
     kspace = torch.from_numpy(kspace)  
 
     # Detect acceleration maps
-    mask = detect_acc_mask(kspace)
+    #mask = detect_acc_mask(kspace)
     
+    # Make an acceleration map
+    mask, _ = make_acc_mask(shape = (smaps.shape[2], smaps.shape[2]), accel = 4, acs_lines = 24)
+    breakpoint()
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
