@@ -20,8 +20,8 @@ def mri_encoding(x, acceleration_map, smaps):
     # x_coils is C x N x N
     y_coils = fft.fftshift(fft.fft2(x_coils, norm = 'ortho'))
     # y_coils is C x N x N
-    y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y_coils)
-    return y_mask
+    # y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y_coils)
+    return y_coils
 
 
 def mri_decoding(y, acceleration_map, smaps):
