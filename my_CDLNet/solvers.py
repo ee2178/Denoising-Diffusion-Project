@@ -22,6 +22,7 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
         x_next = x + alpha * p
         r_next = r - alpha * Ap
         r_norm = torch.norm(r, 2)
+        
         if torch.max((x-x_next).abs()) <= tol:
             tol_reached = True
             return x, tol_reached
