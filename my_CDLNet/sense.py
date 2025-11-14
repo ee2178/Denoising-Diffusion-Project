@@ -4,6 +4,7 @@ import data
 import os
 import h5py
 
+from utils import saveimg
 from mri_utils import mri_encoding, mri_decoding, detect_acc_mask
 from solvers import conj_grad
 from functools import partial
@@ -28,7 +29,7 @@ def sense(y, acceleration_map, smaps):
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e4)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e5)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -52,9 +53,9 @@ def main(args):
     
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
-    kspace = kspace.permute(0, 2, 1).to(device)
+    kspace = kspace.permute(0, 2, 1).to(device)*1e6
     mask = mask.to(device)
-    mri_recon = sense(kspace, mask, smaps)
+    mri_recon, tol_reached = sense(kspace, mask, smaps)
 
     breakpoint()
 
