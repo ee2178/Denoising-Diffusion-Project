@@ -18,7 +18,7 @@ def mri_encoding(x, acceleration_map, smaps):
     # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]
     x_coils = smaps[:, :]* x[None, :, :]
     # x_coils is C x N x N
-    y_coils = fft.fftshift(fft.fft2(x_coils, norm = 'ortho'))
+    y_coils = (fft.fft2(x_coils, norm = 'ortho'))
     # y_coils is C x N x N
     y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y_coils)
     return y_mask
@@ -28,7 +28,7 @@ def mri_decoding(y, acceleration_map, smaps):
     # Apply mask to each channel of y
     y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y)
     # Apply ifft2
-    x_coils = fft.fftshift(fft.ifft2(y_mask, norm = 'ortho'))
+    x_coils = (fft.ifft2(y_mask, norm = 'ortho'))
     # Coil combination
     x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
     return x
