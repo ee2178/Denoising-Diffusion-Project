@@ -29,7 +29,7 @@ def sense(y, acceleration_map, smaps, verbose):
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 1e3, verbose = verbose)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 1e5, verbose = verbose)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -62,11 +62,12 @@ def main(args):
 
     # Mask kspace
     kspace_masked = torch.einsum('jj, ijk -> ijk', mask, kspace)
-    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
+    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = False)
 
     breakpoint()
-    gnd_truth = mri_decoding(kspace, mask, smaps)
-    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
+    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps))
+    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps))
+    mri_recon = fft.fftshift(mri_recon)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     saveimg(gnd_truth, "gnd_truth.png")
