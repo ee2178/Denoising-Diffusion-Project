@@ -11,7 +11,7 @@ import torchvision.transforms.functional as F
 from tqdm import tqdm
 
 class MRIDataset(data.Dataset):
-    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e6):
+    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False):
         self.image_paths = []
         self.image_list = []
         self.start_slice = start_slice
@@ -41,28 +41,38 @@ class MRIDataset(data.Dataset):
         self.root_dirs = root_dirs
         self.transform = transform
         self.scaling_fac = scaling_fac
-
+        self.get_smaps = get_smaps
     def __len__(self):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        # Get a random slice from your volume, starting at start_slice, ending at end_slice
-        slice = np.random.randint(self.start_slice, self.end_slice)
-        with h5py.File(self.image_paths[idx]) as f:
-            image = f['image'][slice, :, :][np.newaxis, :, :]
-        # Convert image to tensor
-        image = torch.from_numpy(image)
-        # Image is a complex tensor, apply transformations to real and imaginary parts
-        image_two_channel = torch.cat((torch.real(image), torch.imag(image)), dim = 0)
-        # We will assume input to already be a tensor:
-        if self.transform:
-            image_transform = self.transform(image_two_channel)
-            image_out = torch.complex(image_transform[0, :, :], image_transform[1, :, :])*self.scaling_fac
+        if not self.get_smaps:
+            # Get a random slice from your volume, starting at start_slice, ending at end_slice
+            slice = np.random.randint(self.start_slice, self.end_slice)
+            with h5py.File(self.image_paths[idx]) as f:
+                image = f['image'][slice, :, :][np.newaxis, :, :]
+            # Convert image to tensor
+            image = torch.from_numpy(image)
+            # Image is a complex tensor, apply transformations to real and imaginary parts
+            image_two_channel = torch.cat((torch.real(image), torch.imag(image)), dim = 0)
+            # We will assume input to already be a tensor:
+            if self.transform:
+                image_transform = self.transform(image_two_channel)
+                image_out = torch.complex(image_transform[0, :, :], image_transform[1, :, :])*self.scaling_fac
+            else:
+                image_out = image[0, :, :] * self.scaling_fac
+            return image_out
         else:
-            image_out = image[0, :, :] * self.scaling_fac
-        return image_out
+            # Return smaps at some fixed slice
+            slice = np.random.randint(self.start_slice, self.end_slice)
+            with h5py.File(self.image_paths[idx]) as f:
+                smaps = f['smaps'][slice, :, :, :]
+            # Convert volume to tensor
+            smaps = torch.from_numpy(smaps) # C x H x W
+            # Don't bother with transformations on volumes
+            return smaps, slice, self.image_paths[idx]
 
-def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6):
+def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
@@ -73,7 +83,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
                                   ])
         # xfm = None
 
-    return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac),
+    return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac, get_smaps = get_smaps),
                            batch_size = batch_size,
                            drop_last  = (not test),
                            shuffle    = (not test))

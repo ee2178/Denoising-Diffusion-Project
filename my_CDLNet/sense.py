@@ -1,0 +1,66 @@
+import torch 
+import torch.fft as fft
+import data
+import os
+import h5py
+
+from mri_utils import mri_encoding, mri_decoding, detect_acc_mask
+from solvers import conj_grad
+from functools import partial
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--test", type=str, help="Run model over specified test set (provided path to image dir).", default=None)
+parser.add_argument("--kspace_path", type =str, help="Corresponding path where kspace data can be found", default = None)
+
+# This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
+
+def eHe(x, mri_encoding, mri_decoding):
+    # Performs E^H E
+    return mri_decoding(mri_encoding(x))
+
+def sense(y, acceleration_map, smaps):
+    # Build a forward operator out of acceleration_map and smaps
+    E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+    EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+    
+    EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
+    # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
+    EHy = EH(y)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e4)
+
+def main(args):
+    ngpu = torch.cuda.device_count()
+    device = torch.device("cuda:0" if ngpu > 0 else "cpu")
+    print(f"Using device {device}.")
+    # Take an input argument that specifies a test directory 
+    loader = data.get_data_loader([args.test], load_color=False, test=True, get_smaps = True)
+    # Get some sample image 
+    smaps, slice, path = next(iter(loader))
+    fname = os.path.basename(path[0])
+    # Find the file at the kspace path
+    kspace_fname = os.path.join(args.kspace_path, fname)
+    with h5py.File(kspace_fname) as f:
+        kspace = f['kspace'][slice, :, :,  :]
+    # Squeeze smaps
+    smaps = smaps[0, :, :, :]
+    kspace = torch.from_numpy(kspace)  
+
+    # Detect acceleration maps
+    mask = detect_acc_mask(kspace)
+    
+    # Switch axes and send to GPU
+    smaps = smaps.permute(0, 2, 1).to(device)
+    kspace = kspace.permute(0, 2, 1).to(device)
+    mask = mask.to(device)
+    mri_recon = sense(kspace, mask, smaps)
+
+    breakpoint()
+
+if __name__ == "__main__":
+    """ 
+    Load arguments from json file and command line and pass to main.
+    """
+    args = parser.parse_args()
+    main(args)
