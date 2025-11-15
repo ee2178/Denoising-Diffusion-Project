@@ -44,8 +44,8 @@ def main(args):
     kspace_fname = os.path.join(args.kspace_path, fname)
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :,  :]
-    # Squeeze smaps
-    smaps = smaps[0, :, :, :]
+    # Squeeze smaps, also conjugate since they come as conjugated form
+    smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
 
     # Detect acceleration maps
