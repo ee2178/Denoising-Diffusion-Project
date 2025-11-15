@@ -54,7 +54,7 @@ def main(args):
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
     smaps = walsh_smaps(kspace[None, :, :, :])
-    smaps = torch.squeeze(smaps)
+    smaps = torch.squeeze(smaps.conj())
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     # Make an acceleration map
