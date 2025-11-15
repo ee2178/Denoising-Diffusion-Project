@@ -67,10 +67,13 @@ class MRIDataset(data.Dataset):
             slice = np.random.randint(self.start_slice, self.end_slice)
             with h5py.File(self.image_paths[idx]) as f:
                 smaps = f['smaps'][slice, :, :, :]
+                image = f['image'][slice, :, :][np.newaxis, :, :]
+            # Convert image to tensor
+            image = torch.from_numpy(image)
             # Convert volume to tensor
             smaps = torch.from_numpy(smaps) # C x H x W
             # Don't bother with transformations on volumes
-            return smaps, slice, self.image_paths[idx]
+            return image, smaps, slice, self.image_paths[idx]
 
 def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False):
     # Don't perform random transformations if in test phase

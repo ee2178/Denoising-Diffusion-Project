@@ -38,7 +38,7 @@ def main(args):
     # Take an input argument that specifies a test directory 
     loader = data.get_data_loader([args.test], load_color=False, test=True, get_smaps = True)
     # Get some sample image 
-    smaps, slice, path = next(iter(loader))
+    image, smaps, slice, path = next(iter(loader))
     fname = os.path.basename(path[0])
     # Find the file at the kspace path
     kspace_fname = os.path.join(args.kspace_path, fname)
@@ -70,7 +70,8 @@ def main(args):
     mri_recon = fft.fftshift(mri_recon)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
-    saveimg(gnd_truth, "gnd_truth.png")
+    saveimg(image, "gnd_truth.png")
+    saveimg(gnd_truth, "EHy.png")
     
 if __name__ == "__main__":
     """ 
