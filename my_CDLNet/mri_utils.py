@@ -22,7 +22,7 @@ def mri_encoding(x, acceleration_map, smaps):
     # y_coils is C x N x N
     mask = acceleration_map
     y_mask = torch.complex(mask[None, :, :], mask[None, :, :]) @ y_coils
-    return y_mask
+    return y_coils
 
 
 def mri_decoding(y, acceleration_map, smaps):
