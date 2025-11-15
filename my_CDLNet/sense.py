@@ -62,7 +62,7 @@ def main(args):
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
-    smaps = smaps / torch.norm(smaps, dim = (1, 2), keepdim = True)
+    smaps = smaps / torch.norm(smaps, keepdim = True)
     kspace = kspace.permute(0, 2, 1).to(device) * 1e6
     mask = mask.to(device)
 
