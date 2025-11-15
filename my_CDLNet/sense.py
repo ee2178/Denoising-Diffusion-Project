@@ -17,7 +17,7 @@ parser.add_argument("--kspace_path", type =str, help="Corresponding path where k
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
-def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.001 + 0.000j)):
+def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.000 + 0.000j)):
     # Performs E^H E with lambda regularization
     return mri_decoding(mri_encoding(x)) + lam * x
 
@@ -29,7 +29,7 @@ def sense(y, acceleration_map, smaps, verbose):
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-5, max_iter = 2e3, verbose = verbose)
+    return conj_grad(EHE, EH(y), tol = 1e-5, max_iter = 200, verbose = verbose)
 
 def main(args):
     ngpu = torch.cuda.device_count()
