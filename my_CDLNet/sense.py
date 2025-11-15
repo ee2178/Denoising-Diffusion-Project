@@ -53,7 +53,7 @@ def main(args):
     # Squeeze smaps, also conjugate since they come as conjugated form
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
-    smaps = walsh_smaps(kspace[None, :, :, :])
+    smaps = walsh_smaps(torch.fft.fftshift(torch.fft.ifft2(kspace[None, :, :, :])))
     smaps = torch.squeeze(smaps.conj())
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
