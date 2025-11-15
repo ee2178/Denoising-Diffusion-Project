@@ -50,7 +50,6 @@ def main(args):
 
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
-    breakpoint()
     # Make an acceleration map
     mask, _ = make_acc_mask(shape = (smaps.shape[2], smaps.shape[2]), accel = 4, acs_lines = 24)
     # Switch axes and send to GPU
@@ -65,9 +64,9 @@ def main(args):
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     breakpoint()
-    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps)).permute(1, 0)
-    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps)).permute(1,0)
-    mri_recon = fft.fftshift(mri_recon).permute(1,0)
+    gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
+    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps).permute(1,0)
+    mri_recon = mri_recon.permute(1,0)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     saveimg(image, "gnd_truth.png")
