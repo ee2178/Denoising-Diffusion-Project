@@ -36,10 +36,16 @@ def main(args):
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
     # Take an input argument that specifies a test directory 
-    loader = data.get_data_loader([args.test], load_color=False, test=True, get_smaps = True)
+    # loader = data.get_data_loader([args.test], load_color=False, test=True, get_smaps = True)
     # Get some sample image 
-    image, smaps, slice, path = next(iter(loader))
-    fname = os.path.basename(path[0])
+    fname = 'file_brain_AXT2_210_2100095.h5'
+    slice = 3
+    #base_fname = os.path.join(args.test, fname)
+    #with h5py.File(base_fname) as f:
+    #    image = f['image'][slice, :, :]
+    #    smaps = f['smaps'][slice, :, :, :]
+    # image, smaps, slice, path = next(iter(loader))
+    # fname = os.path.basename(path[0])
     # Find the file at the kspace path
     kspace_fname = os.path.join(args.kspace_path, fname)
     with h5py.File(kspace_fname) as f:
@@ -71,7 +77,7 @@ def main(args):
     breakpoint()
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
-    saveimg(image, "gnd_truth.png")
+    # saveimg(image, "gnd_truth.png")
     saveimg(gnd_truth, "EHy.png")
     
 if __name__ == "__main__":
