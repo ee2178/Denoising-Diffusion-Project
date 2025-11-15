@@ -17,7 +17,7 @@ parser.add_argument("--kspace_path", type =str, help="Corresponding path where k
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
-def eHe(x, mri_encoding, mri_decoding, lam = 0):
+def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.001 + 0.000j)):
     # Performs E^H E with lambda regularization
     return mri_decoding(mri_encoding(x)) + lam * x
 
