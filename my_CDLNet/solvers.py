@@ -11,7 +11,7 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
         x0 = torch.zeros_like(b)
     # Compute first residual
     r = b - A(x0)
-    p = r
+    p = r.clone()
     x = x0
     tol_reached = False
     for k in tqdm(range(int(max_iter))):

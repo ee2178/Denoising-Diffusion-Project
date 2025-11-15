@@ -63,10 +63,11 @@ def main(args):
     kspace_masked = torch.complex(mask[None, :, :], mask[None, :, :]) @ kspace
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
-    breakpoint()
+    
     gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
     zero_filled_recon = mri_decoding(kspace_masked, mask, smaps).permute(1,0)
     mri_recon = mri_recon.permute(1,0)
+    breakpoint()
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     saveimg(image, "gnd_truth.png")
