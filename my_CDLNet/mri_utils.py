@@ -1,5 +1,6 @@
 import torch 
 import torch.fft as fft
+import torch.nn.functional as F
 import math
 
 # Let us write a helper function to give us a DFT matrix for some N
@@ -125,3 +126,53 @@ def make_acc_mask(
     D = torch.diag(flat[0:N])      # <-- full dense matrix
     
     return D, mask
+
+def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
+    """
+    Computes coil sensitivity maps using the Walsh method.
+    Args:
+        y: complex tensor of shape (B, C, H, W)
+        ks: patch size
+        stride: patch stride
+    Returns:
+        smaps: sensitivity maps of shape (B, C, H, W)
+    """
+    B, C, H, W = y.shape
+
+    # Handle unfolding for complex tensors
+    unfolded_real = F.unfold(y.real, kernel_size=(ks, ks), stride=stride)
+    unfolded_imag = F.unfold(y.imag, kernel_size=(ks, ks), stride=stride)
+    unfolded = torch.complex(unfolded_real, unfolded_imag)  # (B, C*ks*ks, Npatch)
+    Npatch = unfolded.shape[-1]
+
+    # (B, Npatch, C, ks*ks)
+    Yp = unfolded.view(B, C, ks*ks, Npatch).permute(0, 3, 2, 1)  # (B, Npatch, ks*ks, C)
+
+    # Covariance per patch
+    X = torch.matmul(Yp.transpose(-1, -2).conj(), Yp)  # (B, Npatch, C, C)
+
+    # SVD
+    U, S, Vh = torch.linalg.svd(X, full_matrices=False)
+    Q = U[..., 0]  # (B, Npatch, C)
+
+    # Reference coil alignment per batch
+    power = y.abs().pow(2).sum(dim=(2, 3))  # (B, C)
+    Cref = power.argmax(dim=1)
+    for b in range(B):
+        ref = Q[b, :, Cref[b]]
+        Q[b] *= ref.conj().sgn().unsqueeze(-1)
+
+    # Reshape to low-res maps
+    Hp = (H - ks) // stride + 1
+    Wp = (W - ks) // stride + 1
+    smaps_p = Q.permute(0, 2, 1).reshape(B, C, Hp, Wp)
+
+    # Upsample to full size
+    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
+    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
+    smaps = torch.complex(smaps_real, smaps_imag)
+
+    # Normalize
+    norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
+    smaps /= (norm.sqrt() + 1e-8)
+    return smaps

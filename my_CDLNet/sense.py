@@ -5,7 +5,7 @@ import os
 import h5py
 
 from utils import saveimg
-from mri_utils import mri_encoding, mri_decoding, detect_acc_mask, make_acc_mask
+from mri_utils import mri_encoding, mri_decoding, detect_acc_mask, make_acc_mask, walsh_smaps
 from solvers import conj_grad
 from functools import partial
 
@@ -45,9 +45,10 @@ def main(args):
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :,  :]
     # Squeeze smaps, also conjugate since they come as conjugated form
-    smaps = smaps[0, :, :, :].conj()
+    # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
-
+    smaps = walsh_smaps(kspace[None, :, :, :])
+    smaps = torch.squeeze(smaps)
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     # Make an acceleration map
