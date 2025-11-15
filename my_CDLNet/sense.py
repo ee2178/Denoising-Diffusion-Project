@@ -29,7 +29,7 @@ def sense(y, acceleration_map, smaps, verbose):
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e4, verbose = verbose)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 2e3, verbose = verbose)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -50,7 +50,7 @@ def main(args):
 
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
-    
+    breakpoint()
     # Make an acceleration map
     mask, _ = make_acc_mask(shape = (smaps.shape[2], smaps.shape[2]), accel = 4, acs_lines = 24)
     # Switch axes and send to GPU
@@ -65,9 +65,9 @@ def main(args):
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     breakpoint()
-    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps))
-    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps))
-    mri_recon = fft.fftshift(mri_recon)
+    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps)).permute(0, 2, 1)
+    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps)).permute(0, 2, 1)
+    mri_recon = fft.fftshift(mri_recon).permute(0, 2, 1)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     saveimg(image, "gnd_truth.png")
