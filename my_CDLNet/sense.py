@@ -56,7 +56,7 @@ def main(args):
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
     smaps = smaps / torch.norm(smaps, dim = (1, 2), keepdim = True)
-    kspace = kspace.permute(0, 2, 1).to(device)*1e7
+    kspace = kspace.permute(0, 2, 1).to(device)
     mask = mask.to(device)
 
     # Mask kspace
