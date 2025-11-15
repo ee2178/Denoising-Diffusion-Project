@@ -18,19 +18,21 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
         # Apply operator to p
         Ap = A(p)
         # Implement inner products as elementwise sums
-        alpha = torch.sum(r.conj() * r) / (torch.sum(p.conj() * Ap) + 1e-8) 
+        rsold = torch.sum(r.conj() * r)
+        alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8) 
         x_next = x + alpha * p
         r_next = r - alpha * Ap
-        r_norm = torch.norm(r, 2)
+        rsnew = torch.sum(r_next.conj() * r)
         
-        if r_norm <= tol:
+        if torch.sqrt(rsnew.real) <= tol:
             tol_reached = True
             return x_next, tol_reached
-        beta = torch.sum(r_next.conj() *  r_next)/(torch.sum(r.conj() *  r) + 1e-8)
+        beta = rsnew/rsold
         p = r_next + beta * p
         r = r_next
         x = x_next
         if verbose:
-            print(f"Iteration: {k}, Residual: {r_norm}")
+            res = rsnew.real
+            print(f"Iteration: {k}, Residual: {res}")
     return x, tol_reached
 
