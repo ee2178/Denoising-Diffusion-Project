@@ -17,7 +17,7 @@ parser.add_argument("--kspace_path", type =str, help="Corresponding path where k
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
-def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.000 + 0.000j)):
+def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.001 + 0.000j)):
     # Performs E^H E with lambda regularization
     return mri_decoding(mri_encoding(x)) + lam * x
 
@@ -63,7 +63,7 @@ def main(args):
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
     smaps = smaps / torch.norm(smaps, dim = (1, 2), keepdim = True)
-    kspace = kspace.permute(0, 2, 1).to(device)
+    kspace = kspace.permute(0, 2, 1).to(device) * 1e6
     mask = mask.to(device)
 
     # Mask kspace
