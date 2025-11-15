@@ -65,9 +65,9 @@ def main(args):
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     breakpoint()
-    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps)).permute(0, 2, 1)
-    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps)).permute(0, 2, 1)
-    mri_recon = fft.fftshift(mri_recon).permute(0, 2, 1)
+    gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps)).permute(1, 0)
+    zero_filled_recon = fft.fftshift(mri_decoding(kspace_masked, mask, smaps)).permute(1,0)
+    mri_recon = fft.fftshift(mri_recon).permute(1,0)
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     saveimg(image, "gnd_truth.png")
