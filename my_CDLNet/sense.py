@@ -62,7 +62,7 @@ def main(args):
 
     # Mask kspace
     kspace_masked = torch.complex(mask[None, :, :], mask[None, :, :]) @ kspace
-    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = False)
+    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     breakpoint()
     gnd_truth = fft.fftshift(mri_decoding(kspace, mask, smaps))
