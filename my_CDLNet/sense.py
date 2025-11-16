@@ -87,7 +87,7 @@ def main(args):
     # Mask kspace
     kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) * kspace
     
-    gnd_truth = (mri_decoding(kspace, mask, smaps))
+    gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
     saveimg(gnd_truth, "EHy.png")
     saveimg(torch.log10(kspace[0, :, :].abs()), "kspaceslice1_fullysampled.png")
     # Extract a slice of kspace and save it
