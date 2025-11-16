@@ -35,6 +35,12 @@ def sense(y, acceleration_map, smaps, verbose):
     # Load first slice of y
     saveimg(torch.log10(y_fake[0, :, :].abs()+1e-8), "kspaceslice1.png")
     saveimg(acceleration_map, "mask.png")
+    
+    # Take y_fake and try to recreate x_fake
+    x_fake = EH(y_fake)
+    # View xfake
+    saveimg(x_fake, "EEHy.png")
+
     breakpoint()
     return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
 
@@ -71,7 +77,7 @@ def main(args):
     # Normalize smaps for SENSE
     power = torch.sum(torch.abs(smaps)**2, dim=0, keepdim=True)
     # smaps = smaps / torch.sqrt(power + 1e-8)
-    kspace = kspace.to(device) * 1e6
+    kspace = kspace.to(device) * 1e5
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) * kspace
