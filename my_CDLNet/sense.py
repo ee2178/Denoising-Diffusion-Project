@@ -59,27 +59,27 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     # Make an acceleration map
-    mask, _ = make_acc_mask(shape = (smaps.shape[2], smaps.shape[2]), accel = 2, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
     # Switch axes and send to GPU
-    smaps = smaps.permute(0, 2, 1).to(device)
+    smaps = smaps.to(device)
     # Normalize smaps for SENSE
     power = torch.sum(torch.abs(smaps)**2, dim=0, keepdim=True)
     # smaps = smaps / torch.sqrt(power + 1e-8)
-    kspace = kspace.permute(0, 2, 1).to(device) * 1e6
+    kspace = kspace.to(device) * 1e6
     mask = mask.to(device)
-
+    breakpoint()
     # Mask kspace
-    kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) @ kspace
+    kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) * kspace
     
-    gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
+    gnd_truth = (mri_decoding(kspace, mask, smaps))
     saveimg(gnd_truth, "EHy.png")
     # Extract a slice of kspace and save it
-    kspace_from_gnd_truth = mri_encoding(gnd_truth.permute(1, 0), torch.eye(mask.shape[1], device = device), smaps)
+    kspace_from_gnd_truth = mri_encoding(gnd_truth, torch.ones(mask.shape[0], mask.shape[1], device = device), smaps)
     breakpoint()
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
-    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps).permute(1,0)
-    mri_recon = mri_recon.permute(1,0)
+    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
+    mri_recon = mri_recon
     breakpoint()
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
