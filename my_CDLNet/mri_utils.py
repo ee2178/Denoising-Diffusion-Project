@@ -28,13 +28,25 @@ def mri_encoding(x, acceleration_map, smaps):
 
 def mri_decoding(y, acceleration_map, smaps):
     # Apply mask to each channel of y
-    # y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y)
+    y_mask = torch.einsum('jj, ijk -> ijk', acceleration_map, y)
     # Apply ifft2
-    x_coils = fft.fftshift(fft.ifft2(y, norm = 'ortho'))
+    x_coils = fft.fftshift(fft.ifft2(y_mask, norm = 'ortho'))
     # Coil combination
     x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
     return x
 
+
+def check_adjoint(E, EH, smaps):
+    x = torch.randn(smaps.shape[1], smaps.shape[2],  dtype = torch.cfloat)
+    x = x.to(smaps.device)
+    y = torch.randn_like(E(x))
+
+    # Check inner product <x, EH(y)>, <E(x), y>
+    ip1 = torch.sum(x.conj() * EH(y))
+    ip2 = torch.sum(E(x).conj() * y)
+
+    diff = ip1 - ip2
+    return diff, ip1, ip2
 
 def detect_acc_mask(y):
     '''  

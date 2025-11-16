@@ -111,7 +111,7 @@ def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     smaps = torch.complex(smaps_real, smaps_imag)
 
     # Normalize
-    norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
+    norm = smaps.abs().pow(2).sum(dim=0, keepdim=True)
     smaps /= (norm.sqrt() + 1e-8)
     return smaps
 

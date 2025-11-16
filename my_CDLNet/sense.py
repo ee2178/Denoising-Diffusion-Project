@@ -5,7 +5,7 @@ import os
 import h5py
 
 from utils import saveimg
-from mri_utils import mri_encoding, mri_decoding, detect_acc_mask, make_acc_mask, walsh_smaps
+from mri_utils import mri_encoding, mri_decoding, check_adjoint, detect_acc_mask, make_acc_mask, walsh_smaps
 from solvers import conj_grad
 from functools import partial
 
@@ -27,6 +27,7 @@ def sense(y, acceleration_map, smaps, verbose):
     EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
     
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
+    breakpoint()
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
     return conj_grad(EHE, EH(y), tol = 1e-5, max_iter = 50, verbose = verbose)
@@ -62,7 +63,8 @@ def main(args):
     # Switch axes and send to GPU
     smaps = smaps.permute(0, 2, 1).to(device)
     # Normalize smaps for SENSE
-    smaps = smaps / torch.norm(smaps, keepdim = True)
+    power = torch.sum(torch.abs(smaps)**2, dim=0, keepdim=True)
+    # smaps = smaps / torch.sqrt(power + 1e-8)
     kspace = kspace.permute(0, 2, 1).to(device) * 1e7
     mask = mask.to(device)
 
