@@ -73,7 +73,10 @@ def main(args):
     
     gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
     saveimg(gnd_truth, "EHy.png")
-    
+    # Extract a slice of kspace and save it
+    breakpoint()
+    kspace_from_gnd_truth = mri_encoding(gnd_truth.permute(1, 0), torch.eye(mask.shape[1], device = device), smaps)
+    breakpoint()
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     zero_filled_recon = mri_decoding(kspace_masked, mask, smaps).permute(1,0)
