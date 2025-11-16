@@ -27,9 +27,9 @@ def sense(y, acceleration_map, smaps, verbose):
     EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
     
     EHE = partial(eHe, mri_encoding = E, mri_decoding = EH)
-    breakpoint()
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
+    breakpoint()
     return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
 
 def main(args):
@@ -74,7 +74,6 @@ def main(args):
     gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
     saveimg(gnd_truth, "EHy.png")
     # Extract a slice of kspace and save it
-    breakpoint()
     kspace_from_gnd_truth = mri_encoding(gnd_truth.permute(1, 0), torch.eye(mask.shape[1], device = device), smaps)
     breakpoint()
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
