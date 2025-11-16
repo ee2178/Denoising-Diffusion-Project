@@ -19,7 +19,7 @@ def mri_encoding(x, acceleration_map, smaps):
     # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]
     x_coils = smaps[:, :]* x[None, :, :]
     # x_coils is C x N x N
-    y_coils = fft.fft2(x_coils, norm = 'ortho')
+    y_coils = fft.fft2(x_coils, norm = 'ortho', dim = (-2, -1))
     # y_coils is C x N x N
     mask = acceleration_map
     y_mask = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) * y_coils
