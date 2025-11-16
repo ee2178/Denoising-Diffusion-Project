@@ -84,6 +84,7 @@ def main(args):
     
     gnd_truth = (mri_decoding(kspace, mask, smaps))
     saveimg(gnd_truth, "EHy.png")
+    saveimg(torch.log10(kspace[0, :, :].abs()), "kspaceslice1_fullysampled.png")
     # Extract a slice of kspace and save it
     kspace_from_gnd_truth = mri_encoding(gnd_truth, torch.ones(mask.shape[0], mask.shape[1], device = device), smaps)
     breakpoint()
