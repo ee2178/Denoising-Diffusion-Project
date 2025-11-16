@@ -37,7 +37,7 @@ def sense(y, acceleration_map, smaps, verbose):
     saveimg(acceleration_map, "mask.png")
     
     # Take y_fake and try to recreate x_fake
-    x_fake = EH(y_fake)
+    x_fake = EH(fft.fftshift(y_fake, dim = (1, 2)))
     # View xfake
     saveimg(x_fake, "EEHy.png")
 
