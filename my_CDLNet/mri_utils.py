@@ -18,7 +18,6 @@ def mri_encoding(x, acceleration_map, smaps):
     # We take an acceleration_map to be a row-removed identity matrix corresponding to how many lines in kspace we keep [N x N]
     # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]
     x_coils = smaps[:, :]* x[None, :, :]
-    breakpoint()
     # x_coils is C x N x N
     y_coils = fft.fftshift(fft.fft2(x_coils, norm = 'ortho'), dim = (-2, -1))
     # y_coils is C x N x N

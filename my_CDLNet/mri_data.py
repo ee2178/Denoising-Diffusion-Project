@@ -177,7 +177,7 @@ def main(dirs, target_dir):
                         volume_kspace = volume_kspace.to(device)
                         # Get kspace centers
                         # volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
-                        volume_img = torch.fft.fftshift(torch.fft.ifft2(volume_kspace))
+                        volume_img = torch.fft.fftshift(torch.fft.ifft2(volume_kspace), dim = (-2, -1))
                         smaps = walsh_smaps(volume_img)
                         # Apply sensitivity maps and then sum
                         volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img, smaps)

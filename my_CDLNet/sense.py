@@ -54,7 +54,7 @@ def main(args):
     # Squeeze smaps, also conjugate since they come as conjugated form
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
-    smaps = walsh_smaps(torch.fft.fftshift(torch.fft.ifft2(kspace[None, :, :, :])))
+    smaps = walsh_smaps(torch.fft.fftshift(torch.fft.ifft2(kspace[None, :, :, :]), dim = (-2, -1)))
     smaps = torch.squeeze(smaps.conj())
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
@@ -70,18 +70,19 @@ def main(args):
 
     # Mask kspace
     kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) @ kspace
-    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
-
     
     gnd_truth = (mri_decoding(kspace, mask, smaps)).permute(1, 0)
+    saveimg(gnd_truth, "EHy.png")
+    
+    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
+
     zero_filled_recon = mri_decoding(kspace_masked, mask, smaps).permute(1,0)
     mri_recon = mri_recon.permute(1,0)
     breakpoint()
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     # saveimg(image, "gnd_truth.png")
-    saveimg(gnd_truth, "EHy.png")
-    
+
 if __name__ == "__main__":
     """ 
     Load arguments from json file and command line and pass to main.
