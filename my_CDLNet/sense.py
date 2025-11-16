@@ -65,7 +65,7 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     # Make an acceleration map
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 4, acs_lines = 24)
     # Switch axes and send to GPU
     smaps = smaps.to(device)
     # Normalize smaps for SENSE
