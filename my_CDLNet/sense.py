@@ -37,9 +37,14 @@ def sense(y, acceleration_map, smaps, verbose):
     saveimg(acceleration_map, "mask.png")
     
     # Take y_fake and try to recreate x_fake
-    x_fake = EH(fft.fftshift(y_fake, dim = (1, 2)))
+    # Apply mask to each channel of y
+    y_mask = y_fake * acceleration_map[None]
+    # Apply ifft2
+    x_coils = fft.ifft2(y_mask, norm = 'ortho')
+    # Coil combination
+    x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
     # View xfake
-    saveimg(x_fake, "EEHy.png")
+    saveimg(x_coils[0, :, :], "EEHy.png")
 
     breakpoint()
     return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
