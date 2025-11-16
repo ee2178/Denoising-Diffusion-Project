@@ -33,7 +33,7 @@ def sense(y, acceleration_map, smaps, verbose):
     # Look at kspace to make sure E is correct
     y_fake = E(EHy)
     # Load first slice of y
-    saveimg(torch.log10(y_fake[0, :, :].abs()), "kspaceslice1.png")
+    saveimg(torch.log10(y_fake[0, :, :].abs()+1e-8), "kspaceslice1.png")
     saveimg(acceleration_map, "mask.png")
     breakpoint()
     return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
