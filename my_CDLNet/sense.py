@@ -17,7 +17,7 @@ parser.add_argument("--kspace_path", type =str, help="Corresponding path where k
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
-def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.00001 + 0.000j)):
+def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.0001 + 0.000j)):
     # Performs E^H E with lambda regularization
     return mri_decoding(mri_encoding(x)) + lam * x
 
@@ -30,7 +30,7 @@ def sense(y, acceleration_map, smaps, verbose):
     breakpoint()
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
-    return conj_grad(EHE, EH(y), tol = 1e-5, max_iter = 50, verbose = verbose)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -65,11 +65,11 @@ def main(args):
     # Normalize smaps for SENSE
     power = torch.sum(torch.abs(smaps)**2, dim=0, keepdim=True)
     # smaps = smaps / torch.sqrt(power + 1e-8)
-    kspace = kspace.permute(0, 2, 1).to(device) * 1e7
+    kspace = kspace.permute(0, 2, 1).to(device) * 1e6
     mask = mask.to(device)
 
     # Mask kspace
-    kspace_masked = torch.complex(mask[None, :, :], mask[None, :, :]) @ kspace
+    kspace_masked = torch.complex(mask[None, :, :], torch.zeros_like(mask[None, :, :])) @ kspace
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
 
     
