@@ -52,7 +52,7 @@ def main(args):
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device)*1e2
+    kspace = kspace.to(device)*1e3
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
