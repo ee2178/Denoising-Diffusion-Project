@@ -52,13 +52,13 @@ def main(args):
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device) * 1e5
+    kspace = kspace.to(device)
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
     # Try adding some noise to kspace
-    kspace_masked = kspace_masked + 0.1*torch.randn_like(kspace_masked)
-
+    kspace_masked = kspace_masked + 0.05*torch.randn_like(kspace_masked)
+    
 
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
     saveimg(gnd_truth, "EHy.png")
