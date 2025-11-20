@@ -12,7 +12,8 @@ from functools import partial
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--kspace_path", type =str, help="Corresponding path where kspace data can be found", default = None)
+parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = None)
+parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
@@ -52,12 +53,13 @@ def main(args):
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device)*1e3
+    kspace = kspace.to(device)*2e2
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
     # Try adding some noise to kspace
-    kspace_masked = kspace_masked + 0.05*torch.randn_like(kspace_masked)
+    noise_level = args.noise_level
+    kspace_masked = kspace_masked + noise_level*torch.randn_like(kspace_masked)
     
 
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
