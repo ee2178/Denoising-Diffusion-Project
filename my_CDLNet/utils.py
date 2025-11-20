@@ -1,4 +1,5 @@
 import torch
+import torch.fft as fft
 import matplotlib.pyplot as plt
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
