@@ -56,7 +56,10 @@ def main(args):
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
-    
+    # Try adding some noise to kspace
+    kspace_masked = kspace_masked + 0.05*torch.randn_like(kspace_masked)
+
+
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
     saveimg(gnd_truth, "EHy.png")
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
