@@ -57,7 +57,7 @@ def main(args):
     # Mask kspace
     kspace_masked = mask * kspace
     # Try adding some noise to kspace
-    kspace_masked = kspace_masked + 0.05*torch.randn_like(kspace_masked)
+    kspace_masked = kspace_masked + 0.1*torch.randn_like(kspace_masked)
 
 
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
