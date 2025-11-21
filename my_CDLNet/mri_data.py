@@ -5,6 +5,7 @@ import os
 import h5py
 import argparse
 from utils import saveimg
+from mri_utils import walsh_smaps, fftc, ifftc
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train", type=str, help="Run preprocessing over specified training set (provided path to image dir).", default=None)
@@ -13,109 +14,6 @@ parser.add_argument("--test", type=str, help="Run preprocessing over specified t
 parser.add_argument("--target", type=str, help="Store processed images in a new target directory.", default=None)
 ARGS = parser.parse_args()
 
-"""def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
-    
-    Computes coil sensitivity maps using the Walsh method.
-
-    Args:
-        y: complex tensor of shape (B, C, H, W)
-        ks: patch size
-        stride: patch stride
-
-    Returns:
-        smaps: sensitivity maps of shape (B, C, H, W)
-    
-    B, C, H, W = y.shape
-
-    # Unfold patches: shape (B*C, ks*ks, Npatches)
-    # y_reshaped = y.reshape(B * C, 1, H, W)
-    unfolded = F.unfold(y, kernel_size=(ks, ks), stride=stride)  # (B, C*ks*ks, Npatches)
-    Npatch = unfolded.shape[-1]
-
-    # Reshape to (ks*ks, C, Npatch*B)
-    Yp = unfolded.permute(0, 2, 1)
-    Yp = Yp.reshape(B*Npatch, ks*ks, C)
-    # Covariance matrix X: (Npatch*B, C, C)
-    X = Yp.adjoint() @ Yp
-    # Reference coil (max signal energy)
-    power = y.abs().pow(2).sum(dim=(2, 3, 0))  # (C,)
-    Cref = power.argmax().item()
-
-    Q, _, V = torch.linalg.svd(X, full_matrices=False)
-    Q = V[:, 0, :]  # (Npatch*B, C)
-
-    Q = Q.view(B, Npatch, C) # (B, Npatch, C)
-    Q = Q.permute(2, 0, 1) # (C, B, Npatch)
-
-    # Align phase using reference coil
-    qref = Q[Cref:Cref + 1, :, :]
-    Q *= qref.conj().sgn()
-
-    # Reshape to low-res map: (B, C, Hp, Wp)
-    Hp = (H - ks) // stride + 1
-    Wp = (W - ks) // stride + 1
-    smaps_p = Q.permute(1, 0, 2).reshape(B, C, Hp, Wp)
-
-    # Upsample to full size
-    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
-    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
-    smaps = torch.complex(smaps_real, smaps_imag)
-    # Normalize
-    norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
-    smaps /= (norm.sqrt() + 1e-6)
-
-    return smaps.conj()"""
-def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
-    """
-    Computes coil sensitivity maps using the Walsh method.
-    Args:
-        y: complex tensor of shape (B, C, H, W)
-        ks: patch size
-        stride: patch stride
-    Returns:
-        smaps: sensitivity maps of shape (B, C, H, W)
-    """
-    B, C, H, W = y.shape
-
-    # Handle unfolding for complex tensors
-    unfolded_real = F.unfold(y.real, kernel_size=(ks, ks), stride=stride)
-    unfolded_imag = F.unfold(y.imag, kernel_size=(ks, ks), stride=stride)
-    unfolded = torch.complex(unfolded_real, unfolded_imag)  # (B, C*ks*ks, Npatch)
-    Npatch = unfolded.shape[-1]
-
-    # (B, Npatch, C, ks*ks)
-    Yp = unfolded.view(B, C, ks*ks, Npatch).permute(0, 3, 2, 1)  # (B, Npatch, ks*ks, C)
-
-    # Covariance per patch
-    X = torch.matmul(Yp.transpose(-1, -2).conj(), Yp)  # (B, Npatch, C, C)
-
-    # SVD
-    U, S, Vh = torch.linalg.svd(X, full_matrices=False)
-    Q = U[..., 0]  # (B, Npatch, C)
-
-    # Reference coil alignment per batch
-    power = y.abs().pow(2).sum(dim=(2, 3))  # (B, C)
-    Cref = power.argmax(dim=1)
-    for b in range(B):
-        ref = Q[b, :, Cref[b]]
-        Q[b] *= ref.conj().sgn().unsqueeze(-1)
-
-    # Reshape to low-res maps
-    Hp = (H - ks) // stride + 1
-    Wp = (W - ks) // stride + 1
-    smaps_p = Q.permute(0, 2, 1).reshape(B, C, Hp, Wp)
-
-    # Upsample to full size
-    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
-    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
-    smaps = torch.complex(smaps_real, smaps_imag)
-
-    # Normalize
-    norm = smaps.abs().pow(2).sum(dim=0, keepdim=True)
-    smaps /= (norm.sqrt() + 1e-8)
-    return smaps
-
-# Perform zero filled reconstruction on the center of kspace
 def crop_center_kspace(kspace, crop_size):
     """
     Crop the central region of k-space.
@@ -177,12 +75,12 @@ def main(dirs, target_dir):
                         volume_kspace = volume_kspace.to(device)
                         # Get kspace centers
                         # volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
-                        volume_img = torch.fft.fftshift(torch.fft.ifft2(volume_kspace), dim = (-2, -1))
+                        volume_img = ifftc(volume_kspace)
                         smaps = walsh_smaps(volume_img)
                         # Apply sensitivity maps and then sum
                         volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img, smaps)
                         # Save each slice individually
-                        save_volume(volume_kspace, volume_combined, smaps, dir, name, target_dir)
+                        save_volume(kspace = volume_kspace, image = volume_combined, smaps = smaps, dir = dir, name = name, target_dir = target_dir)
     return None
 
 

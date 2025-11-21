@@ -39,7 +39,7 @@ def main(model_args):
     net, _, _, epoch0 = train.init_model(model_args, device=device)
     net.eval()
     # ---------------------------------------------------
-    # ---------------------------------------------------
+    #arser.add_argument("args_fn", type=str, help="Path to args.json file.", default="args.json") ---------------------------------------------------
 
     if ARGS.save_dir is None:
         ARGS.save_dir = model_args['paths']['save']

@@ -28,7 +28,7 @@ class ComplexConvTranspose2d(nn.Module):
         self.P = P
         self.s = stride
         self.bias = bias
-        self.padding=(P-1)//2
+        self.padding=(P-1)//2+1
         
         # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
         self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, bias=False, dtype = torch.float64)
@@ -65,7 +65,7 @@ class CDLNet(nn.Module):
         # Initialize A, B, D, t
         
         # A is a convolutional analysis operators (take channel dimension from 1 -> M or 3 -> M)
-        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2, bias=False, dtype = torch.cfloat) for _ in range(K)])
+        self.A = nn.ModuleList([nn.Conv2d(C, M, P, stride = s, padding=(P-1)//2+1, bias=False, dtype = torch.cfloat) for _ in range(K)])
         # B is a convolutional synthesis operator (take channel dimension from M -> 1 or M -> 3)
         self.B = nn.ModuleList([ComplexConvTranspose2d(M, C, P, stride = s, bias=False) for _ in range(K)])
         

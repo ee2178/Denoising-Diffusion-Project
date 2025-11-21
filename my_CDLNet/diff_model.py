@@ -1,10 +1,27 @@
 import torch 
 import torch.fft as fft
+import torch.nn as nn
 import numpy as np
 import h5py
 import math
-from mri_utils import mri_encoding, mri_decoding
-from torch.func import jacrev
+import json
+import train
+import os
+import gc
+
+from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask
+from functorch import jacrev, jacfwd
+from solvers import conj_grad
+from pprint import pprint
+from functools import partial
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("args_fn", type=str, help="Path to args.json file.", default="args.json")
+parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = None)
+parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
+
+args = parser.parse_args()
 
 # This code will implement ImMAP: Implicit Maximum a Posteriori estimation for MRI reconstruction
 class ImMAP(nn.Module):
@@ -19,31 +36,108 @@ class ImMAP(nn.Module):
         self.sigma_L = sigma_L
         self.h_0 = h_0
     
-    def forward(self, y, sigma_y, acceleration_map, smap): # Provide a y to condition on
+    def forward(self, y, noise_level, acceleration_map, smaps): # Provide a y to condition on
         # Get a random image 
-        x_0 = torch.randn_like(y)
+        x_t = torch.randn(y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
+        x_t = x_t[None, None, :, :]
         # Set initial conditions
         t = 1
         sigma_t = 1
-        E = mri_encoding(acceleration_map, smap)
-        E_H = torch.adjoint(E)
-        while sigma_t > sigma_L:
-            # Get jacobian and denoiser output
-            J_t, x_hat_t = jacrev(self.denoiser, has_aux = True)(x_0, sigma_t)
-            # Get noise level estimate
-            sigma_t = torch.sqrt(torch.mean((x_hat_t - x_t).abs()**2))
-            # Tweedie's formula
-            grad_prior = x_hat_t - x_t
-            # PiGDM Laplace Approx (use * operator because the forward operator E starts with elementwise multiplication
-            sigma_t = sigma_y + sigma_t**2/(1+sigma_t**2)*E*E_H
-            v_t = torch.linalg.inv(sigma_t)@(E*x_hat-y)
-            grad_likelihood = -J_t.adjoint()@ E_H@y
-            # Update step size
-            h_t = self.h_0 * (t/1+h_0*(t-1))
-            # Update noise injection
-            gamma_t = sigma_t*torch.sqrt((1-self.beta*h_t)**2-(1-h_t)**2)
-            noise = torch.randn_like(x_t)
-            # Stochastic gradient ascent
-            x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
-            t = t + 1
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                # Get jacobian and denoiser output
+                def denoise(x, f = self.denoiser, sigma_t = sigma_t):
+                    out = torch.zeros_like(x)
+                    x_hat, _ = self.denoiser(x, sigma_t)
+                    out[:, :, :-1, :-1] = x_hat
+                    return out
+                
+                # J_t, x_hat_t = jacrev(denoise, has_aux = True, argnums = 0)(x_t, sigma_t)
+                # Cheat with padding
+                x_hat_t = denoise(x_t)
+                
+                # Get noise level estimate
+                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                sigma_t = torch.sqrt(sigma_t_sq)
+                # Tweedie's formula
+                grad_prior = x_hat_t - x_t
+                # PiGDM Laplace Approx (use * operator because the forward operator E starts with elementwise multiplication
+                def S_t(x, noise_level=noise_level, sigma_t_sq = sigma_t_sq, E = E, EH = EH):
+                    # We do not actually want to explicitly compute Sigma_t, but rather have the ability to apply it to a matrix
+                    x = torch.squeeze(x)
+                    return noise_level * x + sigma_t_sq/(1+sigma_t_sq)*E(EH(x))
+                # We want to solve sigma_t v_t = E x_hat - y
+                # We may use CG since sigma_t is a covariance matrix + PSD symmetric matrix
+                v_t, _ = conj_grad(S_t, E(x_hat_t) - y)
+                v_t = torch.squeeze(v_t)
+                EHv_t = EH(v_t)
+                EHv_t = EHv_t[None, None, :, :]
+                # Compute vjp
+                # grad_likelihood = torch.zeros_like(x_t)
+                _, grad_likelihood = torch.autograd.functional.vjp(denoise, x_t, EHv_t)
+                # grad_likelihood, _ = -J_t(EHy[None, None, :, :], sigma_t)
+                # Update step size
+                h_t = self.h_0 * (t/1+self.h_0*(t-1))
+                # Update noise injection
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                noise = torch.randn_like(x_t)
+                # Stochastic gradient ascent
+                x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
+                t = t + 1
+                print(f"Iteration {t} complete.") 
         return x_t
+
+def main(args):
+    ngpu = torch.cuda.device_count()
+    device = torch.device("cuda:0" if ngpu > 0 else "cpu")
+    print(f"Using device {device}.")
+    slice = 3
+
+    kspace_fname = args.kspace_path
+    fname = os.path.basename(kspace_fname)
+
+    # Search in val dir for corresponding smaps
+    smaps_fname = os.path.join("../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val", fname)
+    
+    with h5py.File(smaps_fname) as f:
+        smaps = f['smaps'][:, :, :, :]
+        smaps = fft.ifftshift(torch.from_numpy(smaps), dim = (0, 1))
+        smaps = smaps[slice, 0:8, :, :]
+
+    with h5py.File(kspace_fname) as f:
+        kspace = f['kspace'][slice, 0:8, :, :]
+    # Squeeze smaps, also conjugate since they come as conjugated form
+    # smaps = smaps[0, :, :, :].conj()
+    kspace = torch.from_numpy(kspace)
+    # breakpoint()
+    # smaps = walsh_smaps(ifftc(kspace[None]))
+    smaps = torch.squeeze(smaps.conj())
+    # Detect acceleration maps
+    #mask = detect_acc_mask(kspace)
+    
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
+    # Send to GPU
+    smaps = smaps.to(device)
+    # Scale kspace and send to GPU
+    kspace = kspace.to(device)*2e2
+    mask = mask.to(device)
+    # Mask kspace
+    kspace_masked = mask * kspace
+    # Get noise level 
+    noise_level = args.noise_level
+
+    # Load CDLNet denoiser
+    model_args_file = open(args.args_fn)
+    model_args = json.load(model_args_file)
+    pprint(model_args)
+
+    net, _, _, epoch0 = train.init_model(model_args, device=device)
+    net.eval()
+    immap = ImMAP(net)
+    test = immap(kspace_masked, noise_level, mask, smaps)
+    breakpoint()
+
+if __name__ == "__main__":
+    main(args)
