@@ -28,7 +28,7 @@ args = parser.parse_args()
 class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
-                        sigma_L = 0.001, # Noise level cutoff
+                        sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01      # Initial step size
                         ):
         super(ImMAP, self).__init__()
@@ -47,12 +47,11 @@ class ImMAP(nn.Module):
         sigma_t = sigma_t.to(y.device)
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
-
         # Add noise to y
         y = y + noise_level * torch.randn_like(y)
 
         with torch.no_grad():
-            while sigma_t > self.sigma_L or t < 128:
+            while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
                 def denoise(x, sigma, f = self.denoiser):
                     x_hat, _ = f(x, sigma)
@@ -127,7 +126,7 @@ def main(args):
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device)
+    kspace = kspace.to(device)*2e3
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
