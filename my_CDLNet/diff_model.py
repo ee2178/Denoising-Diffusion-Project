@@ -14,6 +14,7 @@ from functorch import jacrev, jacfwd
 from solvers import conj_grad
 from pprint import pprint
 from functools import partial
+from utils import saveimg
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -108,21 +109,22 @@ def main(args):
     
     with h5py.File(smaps_fname) as f:
         smaps = f['smaps'][:, :, :, :]
-        smaps = fft.ifftshift(torch.from_numpy(smaps), dim = (0, 1))
-        smaps = smaps[slice, 0:8, :, :]
+        smaps = smaps[slice, :, :, :]
+        gnd_truth = f['image'][slice, :, :]
 
     with h5py.File(kspace_fname) as f:
-        kspace = f['kspace'][slice, 0:8, :, :]
+        kspace = f['kspace'][slice, :, :, :]
     # Squeeze smaps, also conjugate since they come as conjugated form
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)
     # breakpoint()
     # smaps = walsh_smaps(ifftc(kspace[None]))
-    smaps = torch.squeeze(smaps.conj())
+    smaps = torch.from_numpy(smaps)
+    smaps = torch.squeeze(smaps)
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 1, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 4, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
@@ -137,7 +139,14 @@ def main(args):
     model_args_file = open(args.args_fn)
     model_args = json.load(model_args_file)
     pprint(model_args)
-
+    
+    # Verify kspace and smap stuff works
+    
+    # Check EHy
+    breakpoint()
+    EHy = mri_decoding(kspace, mask, smaps)
+    saveimg(EHy, "Ehy.png")
+    breakpoint()
     net, _, _, epoch0 = train.init_model(model_args, device=device)
     net.eval()
     immap = ImMAP(net)
