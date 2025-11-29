@@ -28,7 +28,7 @@ args = parser.parse_args()
 class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
-                        sigma_L = 0.01, # Noise level cutoff
+                        sigma_L = 0.05, # Noise level cutoff
                         h_0 = 0.01      # Initial step size
                         ):
         super(ImMAP, self).__init__()
@@ -124,7 +124,7 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 1, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
