@@ -42,51 +42,56 @@ class ImMAP(nn.Module):
         x_t = x_t[None, None, :, :]
         # Set initial conditions
         t = 1
-        sigma_t = 1
+        sigma_t = torch.Tensor([1.])
+        sigma_t = sigma_t.to(y.device)
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+
+        # Add noise to y
+        y = y + noise_level * torch.randn_like(y)
+
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
-                def denoise(x, f = self.denoiser, sigma_t = sigma_t):
+                def denoise(x, sigma, f = self.denoiser):
                     out = torch.zeros_like(x)
-                    x_hat, _ = self.denoiser(x, sigma_t)
-                    out[:, :, :-1, :-1] = x_hat
-                    return out
+                    x_hat, _ = f(x, sigma)
+                    return x_hat
                 
                 # J_t, x_hat_t = jacrev(denoise, has_aux = True, argnums = 0)(x_t, sigma_t)
                 # Cheat with padding
-                x_hat_t = denoise(x_t)
-                
+                x_hat_t = denoise(x_t, sigma_t)
                 # Get noise level estimate
                 sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                sigma_t = torch.sqrt(sigma_t_sq)
+                # sigma_t = torch.sqrt(sigma_t_sq)
                 # Tweedie's formula
                 grad_prior = x_hat_t - x_t
                 # PiGDM Laplace Approx (use * operator because the forward operator E starts with elementwise multiplication
                 def S_t(x, noise_level=noise_level, sigma_t_sq = sigma_t_sq, E = E, EH = EH):
                     # We do not actually want to explicitly compute Sigma_t, but rather have the ability to apply it to a matrix
                     x = torch.squeeze(x)
-                    return noise_level * x + sigma_t_sq/(1+sigma_t_sq)*E(EH(x))
+                    return noise_level**2 * x + sigma_t_sq/(1+sigma_t_sq)*E(EH(x))
                 # We want to solve sigma_t v_t = E x_hat - y
                 # We may use CG since sigma_t is a covariance matrix + PSD symmetric matrix
-                v_t, _ = conj_grad(S_t, E(x_hat_t) - y)
+                v_t, tol_reached = conj_grad(S_t, E(x_hat_t) - y, max_iter = 100, tol=1e-3, verbose = False)
                 v_t = torch.squeeze(v_t)
                 EHv_t = EH(v_t)
                 EHv_t = EHv_t[None, None, :, :]
                 # Compute vjp
                 # grad_likelihood = torch.zeros_like(x_t)
-                _, grad_likelihood = torch.autograd.functional.vjp(denoise, x_t, EHv_t)
+                _, (grad_likelihood, _) = torch.autograd.functional.vjp(denoise, (x_t, sigma_t), EHv_t)
+                grad_likelihood = -1*sigma_t_sq*grad_likelihood
+                sigma_t = torch.sqrt(sigma_t_sq)
                 # grad_likelihood, _ = -J_t(EHy[None, None, :, :], sigma_t)
                 # Update step size
-                h_t = self.h_0 * (t/1+self.h_0*(t-1))
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 # Update noise injection
                 gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
                 noise = torch.randn_like(x_t)
                 # Stochastic gradient ascent
                 x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
                 t = t + 1
-                print(f"Iteration {t} complete.") 
+                print(f"Iteration {t} complete. Noise level: {sigma_t}") 
         return x_t
 
 def main(args):
@@ -117,11 +122,11 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 1, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device)*2e2
+    kspace = kspace.to(device)
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace

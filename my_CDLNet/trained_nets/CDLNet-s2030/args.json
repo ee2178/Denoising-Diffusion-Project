@@ -19,8 +19,8 @@
             "epochs": 6000,
             "mcsure": false,
             "noise_std": [
-                20,
-                30
+                0,
+                126
             ],
             "save_freq": 5,
             "val_freq": 50,
@@ -31,7 +31,7 @@
             "crop_size": 256,
             "end_slice": 8,
             "load_color": false,
-            "scaling_fac": 1000000.0,
+            "scaling_fac": 2000.0,
             "start_slice": 0,
             "trn_path_list": [
                 "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train"

@@ -187,7 +187,7 @@ def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     # Normalize
     norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
     smaps /= (norm.sqrt() + 1e-8)
-    return smaps
+    return smaps.conj()
 
 def fftc(x, dim = (-2, -1), mode = 'ortho'):
     return fft.fftshift(fft.fftn(fft.ifftshift(x, dim = dim), dim = dim, norm = mode), dim = dim)

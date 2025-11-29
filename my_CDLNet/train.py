@@ -79,6 +79,7 @@ def fit(net, opt, loaders,
                 # apply mask if need to demosaic 
                 mask = 1
                 batch = batch[:, None, :, :] # Insert channel dim
+                
                 # apply noise 
                 noisy_batch, sigma_n = awgn(batch, phase_nstd)
                 obsrv_batch = mask * noisy_batch

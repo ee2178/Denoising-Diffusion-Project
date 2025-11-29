@@ -51,7 +51,7 @@ def main(model_args):
 
     with torch.no_grad():
         if ARGS.test is not None:
-            loader = data.get_data_loader([ARGS.test], load_color=ARGS.color, test=True)
+            loader = data.get_data_loader([ARGS.test], load_color=ARGS.color, test=True, scaling_fac = model_args['train']['loaders']['scaling_fac'])
             test(net, loader, noise_level=ARGS.noise_level, blind=ARGS.blind, device=device)
 
         if ARGS.dictionary:

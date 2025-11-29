@@ -66,7 +66,7 @@ def main(args):
     saveimg(gnd_truth, "EHy.png")
     mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
     zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
-    breakpoint()
+
     saveimg(zero_filled_recon, "test_zerofilled.png")
     saveimg(mri_recon, "test_sense.png")
     # saveimg(image, "gnd_truth.png")

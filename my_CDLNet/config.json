@@ -22,11 +22,11 @@
 		"load_color": false,
 		"start_slice": 0,
 		"end_slice": 8,
-        "scaling_fac":1e6
+        "scaling_fac":2e3
 	},
 	"fit": {
 		"epochs": 6000,
-		"noise_std": [20,30],
+		"noise_std": [0,126],
 		"val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 2,

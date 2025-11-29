@@ -78,7 +78,7 @@ def main(dirs, target_dir):
                         volume_img = ifftc(volume_kspace)
                         smaps = walsh_smaps(volume_img)
                         # Apply sensitivity maps and then sum
-                        volume_combined = torch.einsum('ijkl,ijkl->ikl', volume_img, smaps)
+                        volume_combined = torch.einsum('ijkl,ijkl->ikl', smaps.conj(), volume_img)
                         # Save each slice individually
                         save_volume(kspace = volume_kspace, image = volume_combined, smaps = smaps, dir = dir, name = name, target_dir = target_dir)
     return None
