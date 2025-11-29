@@ -124,7 +124,7 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 4, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 1, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
@@ -143,10 +143,10 @@ def main(args):
     # Verify kspace and smap stuff works
     
     # Check EHy
-    breakpoint()
-    EHy = mri_decoding(kspace, mask, smaps)
-    saveimg(EHy, "Ehy.png")
-    breakpoint()
+    # breakpoint()
+    # EHy = mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = smaps.device), smaps)
+    # saveimg(EHy, "Ehy.png")
+    # breakpoint()
     net, _, _, epoch0 = train.init_model(model_args, device=device)
     net.eval()
     immap = ImMAP(net)
