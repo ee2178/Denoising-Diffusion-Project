@@ -28,7 +28,7 @@ args = parser.parse_args()
 class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
-                        sigma_L = 0.05, # Noise level cutoff
+                        sigma_L = 0.005, # Noise level cutoff
                         h_0 = 0.01      # Initial step size
                         ):
         super(ImMAP, self).__init__()
@@ -55,7 +55,6 @@ class ImMAP(nn.Module):
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
                 def denoise(x, sigma, f = self.denoiser):
-                    out = torch.zeros_like(x)
                     x_hat, _ = f(x, sigma)
                     return x_hat
                 
