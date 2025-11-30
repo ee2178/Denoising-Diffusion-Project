@@ -29,7 +29,7 @@ class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
-                        h_0 = 0.01      # Initial step size
+                        h_0 = 0.005      # Initial step size
                         ):
         super(ImMAP, self).__init__()
         self.denoiser = denoiser
@@ -45,10 +45,11 @@ class ImMAP(nn.Module):
         t = 1
         sigma_t = torch.Tensor([1.])
         sigma_t = sigma_t.to(y.device)
+        sigma_t_prev = sigma_t
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Add noise to y
-        y = y + noise_level * torch.randn_like(y)
+        y = y + noise_level * acceleration_map * torch.randn_like(y)
 
         with torch.no_grad():
             while sigma_t > self.sigma_L:
@@ -91,6 +92,9 @@ class ImMAP(nn.Module):
                 x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
+                if sigma_t > sigma_t_prev:
+                    breakpoint()
+                sigma_t_prev = sigma_t
         return x_t
 
 def main(args):
@@ -122,7 +126,7 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 4, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU

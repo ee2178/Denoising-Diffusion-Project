@@ -20,7 +20,7 @@
             "mcsure": false,
             "noise_std": [
                 0,
-                126
+                191
             ],
             "save_freq": 5,
             "val_freq": 50,
