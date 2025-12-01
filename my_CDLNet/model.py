@@ -177,8 +177,9 @@ class LPDSNet(nn.Module):
                         P = 7, # kernel size
                         s = 1, # stride
                         C = 1, # number of input channels (either 1 or 3)
-                        t0 = 0, # initial threshold
-                        adaptive = False, # noise adaptive thresholds
+                        l0 = 1e-3, # initial threshold
+                        E = None, # Measurement operator
+                        adaptive = False, # noise adaptive threshold
                         init = True): # False -> use power method for weight init
         super(LPDSNet, self).__init__()
 
@@ -192,11 +193,47 @@ class LPDSNet(nn.Module):
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0
 
         # t are the learned thresholds for the elementwise clipping (K (num folds) x 2 (noise adaptive thresh) x M (num channels))
-        self.t = nn.Parameter(t0*torch.ones(K, 2, M, 1, 1))
+        self.l = nn.Parameter(l0*torch.ones(K, 2, M, 1, 1))
+        self.l[:, 1, :, :, :] = 0
 
+        # If we have E = None, then self.E is going to be an identity mapping (corresponding to a denoising problem)
+        if E:
+            self.E = E
+        else: 
+            self.E = nn.identity
+        
         # weight initialization (important! must initialize weights same weights for A and B)
         W = torch.randn(M, C, P, P, dtype = torch.cfloat)
         for k in range(K):
             self.A[k].weight.data = W.clone()
             # Have to initialize real and imaginary parts of transposed conv separately
             self.B[k].conv_real.weight.data = torch.real(W).clone()
+            self.B[k].conv_imag.weight.data = -1*torch.imag(W).clone()
+
+        # Don't bother running code if initializing trained model from state-dict
+        if init:
+            print("Running power-method on initial dictionary...")
+            with torch.no_grad():
+                DDt = lambda x: self.D(self.A[0](x))
+                # power method returns the dominant eigenvalue for a matrix
+                L = power_method(DDt, torch.rand(1,C,128,128, dtype = torch.cfloat), num_iter=200, verbose=False)[0]
+                print(f"Done. L={L:.3e}.")
+
+                if np.abs(L)  < 0:
+                    print("STOP: something is very very wrong...")
+                    sys.exit()
+
+            # spectral normalization (note: D is alised to B[0]), i.e. divide by dominant singular value/sqrt of dominant eigenvalue
+            for k in range(K):
+                self.A[k].weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_real.weight.data /= np.sqrt(np.abs(L))
+                self.B[k].conv_imag.weight.data /= np.sqrt(np.abs(L))
+
+        # set parameters
+        self.K = K
+        self.M = M
+        self.P = P
+        self.s = s
+        self.C = C
+        self.l0 = l0
+        self.adaptive = adaptive

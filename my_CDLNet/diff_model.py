@@ -90,11 +90,15 @@ class ImMAP(nn.Module):
                 noise = torch.randn_like(x_t)
                 # Stochastic gradient ascent
                 x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
+                if t % 5 == 0:
+                    fname = os.path.join("diff_figs", "diffusion_iteration_"+str(t)+".png")
+                    saveimg(x_t, fname)
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
                 if sigma_t > sigma_t_prev:
                     breakpoint()
                 sigma_t_prev = sigma_t
+                
         return x_t
 
 def main(args):
