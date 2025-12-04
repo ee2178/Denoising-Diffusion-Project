@@ -72,7 +72,7 @@ class ImMAP(nn.Module):
                     return noise_level**2 * x + sigma_t_sq/(1+sigma_t_sq)*E(EH(x))
                 # We want to solve sigma_t v_t = E x_hat - y
                 # We may use CG since sigma_t is a covariance matrix + PSD symmetric matrix
-                v_t, tol_reached = conj_grad(S_t, E(x_hat_t) - y, max_iter = 100, tol=1e-3, verbose = False)
+                v_t, tol_reached = conj_grad(S_t, E(x_hat_t) - y, max_iter = 1e5, tol=1e-2, verbose = False)
                 v_t = torch.squeeze(v_t)
                 EHv_t = EH(v_t)
                 EHv_t = EHv_t[None, None, :, :]

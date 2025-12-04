@@ -272,10 +272,12 @@ class LPDSNet(nn.Module):
     @torch.no_grad()
     def project(self):
 
-        """ \ell_2 ball projection for filters, R_+ projection for thresholds
+        """ \ell_2 ball projection for filters, R_+ projection for thresholds, clip values, step sizes
 
         """
         self.l.clamp_(0.0)
+        self.eta.clamp_(0.0)
+        self.theta.clamp_(0.0)
         for k in range(self.K):
             self.A[k].weight.data = uball_project(self.A[k].weight.data)
             # self.B[k].weight.data = uball_project(self.B[k].weight.data)
