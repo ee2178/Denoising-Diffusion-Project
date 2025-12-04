@@ -50,7 +50,6 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Add noise to y
         y = y + noise_level * acceleration_map * torch.randn_like(y)
-        breakpoint()
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
