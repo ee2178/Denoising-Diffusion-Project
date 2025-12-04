@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from model import CDLNet
+from model import CDLNet, LPDSNet
 from train_utils import awgn
 from data import get_fit_loaders
 
@@ -194,7 +194,10 @@ def init_model(args, device):
     model_type, model_args, train_args, paths = [args[item] for item in ['type','model','train','paths']]
     # If loading from checkpoint, init = False
     init = False if paths['ckpt'] is not None else True
-    net  = CDLNet(**model_args, init=init)
+    if model_type == "CDLNet":
+        net  = CDLNet(**model_args, init=init)
+    elif model_type == "LPDSNet":
+        net = LPDSNet(**model_args, init = init)
     # Place model on gpu
     net.to(device)
     

@@ -1,5 +1,5 @@
 {
-"type": "CDLNet",
+"type": "LPDSNet",
 "model": {
 	"adaptive": true,
 	"K": 30,
@@ -9,8 +9,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/CDLNet-s2030",
-	"ckpt": "trained_nets/CDLNet-s2030/cdlnet24hr.ckpt"
+	"save": "trained_nets/LPDSNet",
+	"ckpt": "trained_nets/LPDSNet/net.ckpt"
 },
 "train": {
 	"loaders": {
@@ -26,7 +26,7 @@
 	},
 	"fit": {
 		"epochs": 6000,
-		"noise_std": [0,191],
+		"noise_std": [0,126],
 		"val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 2,

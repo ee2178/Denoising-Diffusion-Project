@@ -1,0 +1,55 @@
+{
+    "model": {
+        "C": 1,
+        "K": 30,
+        "M": 169,
+        "P": 7,
+        "adaptive": true,
+        "s": 2
+    },
+    "paths": {
+        "ckpt": "trained_nets/LPDSNet/net.ckpt",
+        "save": "trained_nets/LPDSNet"
+    },
+    "train": {
+        "fit": {
+            "backtrack_thresh": 2,
+            "clip_grad": 0.05,
+            "demosaic": false,
+            "epochs": 6000,
+            "mcsure": false,
+            "noise_std": [
+                0,
+                126
+            ],
+            "save_freq": 5,
+            "val_freq": 50,
+            "verbose": true
+        },
+        "loaders": {
+            "batch_size": 10,
+            "crop_size": 256,
+            "end_slice": 8,
+            "load_color": false,
+            "scaling_fac": 2000.0,
+            "start_slice": 0,
+            "trn_path_list": [
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train"
+            ],
+            "tst_path_list": [
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test"
+            ],
+            "val_path_list": [
+                "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val"
+            ]
+        },
+        "opt": {
+            "lr": 0.001
+        },
+        "sched": {
+            "gamma": 0.95,
+            "step_size": 50
+        }
+    },
+    "type": "LPDSNet"
+}

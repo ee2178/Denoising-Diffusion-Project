@@ -23,7 +23,7 @@ def CLIP(z, t):
     CLIP(z, t) = sgn(x)*min(|z|, t)
     '''
 
-    return x.sgn()*torch.clip(z.abs(), min = t)
+    return z.sgn()*torch.clip(z.abs(), min = t)
 
 class ComplexConvTranspose2d(nn.Module):
     def __init__(self,  M, 
@@ -178,7 +178,10 @@ class LPDSNet(nn.Module):
                         s = 1, # stride
                         C = 1, # number of input channels (either 1 or 3)
                         l0 = 1e-3, # initial threshold
+                        eta_0 = 0.5,
+                        theta_0 = 0.1,
                         E = None, # Measurement operator
+                        EH = None,
                         adaptive = False, # noise adaptive threshold
                         init = True): # False -> use power method for weight init
         super(LPDSNet, self).__init__()
@@ -193,14 +196,16 @@ class LPDSNet(nn.Module):
         self.D = self.B[0] # alias D to B[0], otherwise unused as z0 is 0
 
         # t are the learned thresholds for the elementwise clipping (K (num folds) x 2 (noise adaptive thresh) x M (num channels))
-        self.l = nn.Parameter(l0*torch.ones(K, 2, M, 1, 1))
-        self.l[:, 1, :, :, :] = 0
+        self.l = nn.Parameter(torch.cat((l0*torch.ones(K, 1, M, 1, 1), torch.zeros(K, 1, M, 1, 1)), dim = 1))
+        # Set lambda_0 to l0, lambda_1 to 0.
 
         # If we have E = None, then self.E is going to be an identity mapping (corresponding to a denoising problem)
         if E:
             self.E = E
+            self.EH = EH
         else: 
-            self.E = nn.identity
+            self.E = nn.Identity()
+            self.EH = nn.Identity()
         
         # weight initialization (important! must initialize weights same weights for A and B)
         W = torch.randn(M, C, P, P, dtype = torch.cfloat)
@@ -237,3 +242,45 @@ class LPDSNet(nn.Module):
         self.C = C
         self.l0 = l0
         self.adaptive = adaptive
+
+        # initialize eta and theta
+        self.eta = nn.Parameter(eta_0 * torch.ones(K, 1))
+        self.theta = nn.Parameter(theta_0 * torch.ones(K, 1))
+
+    def forward(self, y, sigma=None, mask = 1):
+        # Apply forward measurement operator 
+        EHy = self.EH(y)
+        # mean subtraction and stride padding 
+        yp, params = pre_process(EHy, self.s, mask = mask)
+        # Threshold scale factor
+        c = 0 if sigma is None or not self.adaptive else sigma/255.0
+        # Take first steps (K = 1)
+        x = - self.eta[0]*(-yp)
+        xp = self.theta[0]*(x)
+        xprev = x
+        
+        z = CLIP(self.A[0](xp), self.l[0, :1] + c*self.l[1, 1:2])
+        # Perform K-1 LDPS  iterations
+        for k in range(1, self.K):
+            x = x - self.eta[k]*(self.EH(self.E(x))-yp+self.B[k](z))
+            xp = x + self.theta[k]*(x-xprev)
+            z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
+        x_hat = post_process(x, params)
+        return x_hat, z
+    
+    @torch.no_grad()
+    def project(self):
+
+        """ \ell_2 ball projection for filters, R_+ projection for thresholds
+
+        """
+        self.l.clamp_(0.0)
+        for k in range(self.K):
+            self.A[k].weight.data = uball_project(self.A[k].weight.data)
+            # self.B[k].weight.data = uball_project(self.B[k].weight.data)
+            # Since the weight filters in our B's are separated into real and imag parts, we need to combine them and then uball project
+            B_weights_complex = torch.complex(self.B[k].conv_real.weight.data, self.B[k].conv_imag.weight.data)
+            B_weights_complex = uball_project(B_weights_complex)
+            # Write them to our filters separately
+            self.B[k].conv_real.weight.data = torch.real(B_weights_complex)
+            self.B[k].conv_imag.weight.data = torch.imag(B_weights_complex)

@@ -50,7 +50,7 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Add noise to y
         y = y + noise_level * acceleration_map * torch.randn_like(y)
-
+        breakpoint()
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
@@ -95,8 +95,8 @@ class ImMAP(nn.Module):
                     saveimg(x_t, fname)
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
-                if sigma_t > sigma_t_prev:
-                    breakpoint()
+                #if sigma_t > sigma_t_prev:
+                #    breakpoint()
                 sigma_t_prev = sigma_t
                 
         return x_t
