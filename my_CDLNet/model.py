@@ -20,10 +20,10 @@ def CLIP(z, t):
     '''
     Define an elementwise clipping operation on x with threshold t
 
-    CLIP(z, t) = sgn(x)*min(|z|, t)
+    CLIP(z, t) = sgn(x)*max(|z|, t)
     '''
 
-    return z.sgn()*torch.clip(z.abs(), min = t)
+    return z.sgn()*torch.clamp(z.abs(), min=t)
 
 class ComplexConvTranspose2d(nn.Module):
     def __init__(self,  M, 
@@ -260,6 +260,7 @@ class LPDSNet(nn.Module):
         xprev = x
         
         z = CLIP(self.A[0](xp), self.l[0, :1] + c*self.l[1, 1:2])
+        
         # Perform K-1 LDPS  iterations
         for k in range(1, self.K):
             x = x - self.eta[k]*(self.EH(self.E(x))-yp+self.B[k](z))
