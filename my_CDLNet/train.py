@@ -190,7 +190,7 @@ def setlr(opt, lr):
     for (i, pg) in enumerate(opt.param_groups):
         pg['lr'] = lr[i]
     
-def init_model(args, device):
+def init_model(args, device, quant_ckpt = False):
     model_type, model_args, train_args, paths = [args[item] for item in ['type','model','train','paths']]
     # If loading from checkpoint, init = False
     init = False if paths['ckpt'] is not None else True
@@ -202,9 +202,13 @@ def init_model(args, device):
     net.to(device)
     
     # set optimizer and learning rate schedule
-    opt   = torch.optim.Adam(net.parameters(), **train_args['opt'])     
-    sched = torch.optim.lr_scheduler.StepLR(opt, **train_args['sched'])
-    
+    if quant_ckpt:
+        opt = None
+        sched = None
+    else:
+        opt   = torch.optim.Adam(net.parameters(), **train_args['opt'])     
+        sched = torch.optim.lr_scheduler.StepLR(opt, **train_args['sched'])
+
     # get checkpoint path
     ckpt_path = paths['ckpt']
     
@@ -215,9 +219,9 @@ def init_model(args, device):
     else:
         epoch0 = 0
 
-    print("Current Learning Rate(s):")
-    for param_group in opt.param_groups:
-        print(param_group['lr'])
+    #print("Current Learning Rate(s):")
+    #for param_group in opt.param_groups:
+    #    print(param_group['lr'])
 
     total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
     print(f"Total Number of Parameters: {total_params:,}")

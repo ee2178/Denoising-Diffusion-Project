@@ -23,7 +23,7 @@ def CLIP(z, t):
     CLIP(z, t) = sgn(x)*max(|z|, t)
     '''
 
-    return z.sgn()*torch.clamp(z.abs(), min=t)
+    return z.sgn()*torch.clamp(z.abs(), max=t)
 
 class ComplexConvTranspose2d(nn.Module):
     def __init__(self,  M, 

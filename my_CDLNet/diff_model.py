@@ -143,7 +143,7 @@ def main(args):
     # EHy = mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = smaps.device), smaps)
     # saveimg(EHy, "Ehy.png")
     # breakpoint()
-    net, _, _, epoch0 = train.init_model(model_args, device=device)
+    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
     immap = ImMAP(net)
     test = immap(kspace_masked, noise_level, mask, smaps)
