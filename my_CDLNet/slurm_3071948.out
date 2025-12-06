@@ -31,3 +31,5 @@ Current Learning Rate(s):
 Total Number of Parameters: 755,490
 Using trained_nets/LPDSNet ...
 fit: using device cuda:0
+TRAIN PSNR: 24.598 dB
+TRAIN PSNR: 26.497 dB

@@ -10,7 +10,7 @@
 },
 "paths": {
 	"save": "trained_nets/LPDSNet",
-	"ckpt": "trained_nets/CDLNet-s2030/cdlnet_w4.ckpt"
+	"ckpt": "trained_nets/CDLNet-s2030/cdlnet_w8.ckpt"
 },
 "train": {
 	"loaders": {
