@@ -49,16 +49,13 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Add noise to y
-        y = y + noise_level * acceleration_map * torch.randn_like(y)
+        y = y + noise_level * torch.randn_like(y)
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
                 def denoise(x, sigma, f = self.denoiser):
                     x_hat, _ = f(x, sigma*255.)
                     return x_hat
-                
-                # J_t, x_hat_t = jacrev(denoise, has_aux = True, argnums = 0)(x_t, sigma_t)
-                # Cheat with padding
                 x_hat_t = denoise(x_t, sigma_t)
                 # Get noise level estimate
                 sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
@@ -77,11 +74,8 @@ class ImMAP(nn.Module):
                 EHv_t = EH(v_t)
                 EHv_t = EHv_t[None, None, :, :]
                 # Compute vjp
-                # grad_likelihood = torch.zeros_like(x_t)
                 _, (grad_likelihood, _) = torch.autograd.functional.vjp(denoise, (x_t, sigma_t), EHv_t)
                 grad_likelihood = -1*sigma_t_sq*grad_likelihood
-                # sigma_t = torch.sqrt(sigma_t_sq)
-                # grad_likelihood, _ = -J_t(EHy[None, None, :, :], sigma_t)
                 # Update step size
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 # Update noise injection
@@ -94,10 +88,7 @@ class ImMAP(nn.Module):
                     saveimg(x_t, fname)
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
-                #if sigma_t > sigma_t_prev:
-                #    breakpoint()
                 sigma_t_prev = sigma_t
-                
         return x_t
 
 def main(args):

@@ -179,7 +179,7 @@ class LPDSNet(nn.Module):
                         C = 1, # number of input channels (either 1 or 3)
                         l0 = 1e-3, # initial threshold
                         eta_0 = 0.5,
-                        theta_0 = 0.1,
+                        theta_0 = 0.,
                         E = None, # Measurement operator
                         EH = None,
                         adaptive = False, # noise adaptive threshold
@@ -256,7 +256,7 @@ class LPDSNet(nn.Module):
         c = 0 if sigma is None or not self.adaptive else sigma/255.0
         # Take first steps (K = 1)
         x = - self.eta[0]*(-yp)
-        xp = self.theta[0]*(x)
+        xp = x + self.theta[0]*(x)
         xprev = x
         
         z = CLIP(self.A[0](xp), self.l[0, :1] + c*self.l[1, 1:2])
@@ -266,6 +266,7 @@ class LPDSNet(nn.Module):
             x = x - self.eta[k]*(self.EH(self.E(x))-yp+self.B[k](z))
             xp = x + self.theta[k]*(x-xprev)
             z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
+            xprev = x
         x_hat = post_process(x, params)
         return x_hat, z
     
