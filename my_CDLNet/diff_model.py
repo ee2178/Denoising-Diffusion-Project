@@ -89,6 +89,8 @@ class ImMAP(nn.Module):
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
                 sigma_t_prev = sigma_t
+            fname = os.path.join("diff_figs", "diffusion_final_iteration.png")
+            saveimg(x_t, fname)
         return x_t
 
 def main(args):
