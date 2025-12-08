@@ -1,5 +1,5 @@
 {
-"type": "CDLNet",
+"type": "LPDSNet",
 "model": {
 	"adaptive": true,
 	"K": 30,
@@ -10,7 +10,7 @@
 },
 "paths": {
 	"save": "trained_nets/LPDSNet",
-	"ckpt": "trained_nets/CDLNet-s2030/cdlnet_w8.ckpt"
+	"ckpt": "trained_nets/LPDSNet/net.ckpt"
 },
 "train": {
 	"loaders": {

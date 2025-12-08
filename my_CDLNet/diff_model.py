@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("args_fn", type=str, help="Path to args.json file.", default="args.json")
 parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = None)
 parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
+parser.add_argument("--save_dir", type=str, help="Directory to save iterations to", default = None)
 
 args = parser.parse_args()
 
@@ -37,7 +38,7 @@ class ImMAP(nn.Module):
         self.sigma_L = sigma_L
         self.h_0 = h_0
     
-    def forward(self, y, noise_level, acceleration_map, smaps): # Provide a y to condition on
+    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None): # Provide a y to condition on
         # Get a random image 
         x_t = torch.randn(y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
         x_t = x_t[None, None, :, :]
@@ -83,13 +84,13 @@ class ImMAP(nn.Module):
                 noise = torch.randn_like(x_t)
                 # Stochastic gradient ascent
                 x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
-                if t % 5 == 0:
-                    fname = os.path.join("diff_figs", "diffusion_iteration_"+str(t)+".png")
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
                 sigma_t_prev = sigma_t
-            fname = os.path.join("diff_figs", "diffusion_final_iteration.png")
+            fname = os.path.join(save_dir, "diffusion_final_iteration.png")
             saveimg(x_t, fname)
         return x_t
 
@@ -145,10 +146,13 @@ def main(args):
     # EHy = mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = smaps.device), smaps)
     # saveimg(EHy, "Ehy.png")
     # breakpoint()
+
+    save_dir = args.save_dir
+
     net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
     immap = ImMAP(net)
-    test = immap(kspace_masked, noise_level, mask, smaps)
+    test = immap(kspace_masked, noise_level, mask, smaps, save_dir)
     breakpoint()
 
 if __name__ == "__main__":
