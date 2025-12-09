@@ -110,6 +110,9 @@ class ImMAP(nn.Module):
         sigma_y = noise_level
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+
+        # Precompute EHy for calculation
+        EHy = EH(y)
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
@@ -118,7 +121,7 @@ class ImMAP(nn.Module):
                 sigma_t = torch.sqrt(sigma_t_sq)
 
                 # Compute proximal weighting
-                p_t = self.lam*sigma_y / (sigma_t_sq/(1+sigma_t_sq))
+                p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
                
                 # update step size
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
@@ -137,9 +140,9 @@ class ImMAP(nn.Module):
                 # A^Ty+p_t/2x_t = (A^TA + p_t/2*I)x, conjugate gradient here!
 
                 def A(x, p_t = p_t, E = E, EH = EH):
-                    return EH(E(x)) + p_t/2*x
+                    return EH(E(x)) + p_t*x
                 
-                prox_update, tol_reached = conj_grad(A, torch.squeeze(x_hat_t), max_iter = 1e5, tol=1e-2, verbose = False)
+                prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1e5, tol=1e-2, verbose = False)
 
                 # Perform update
                 x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
