@@ -15,6 +15,7 @@ from solvers import conj_grad
 from pprint import pprint
 from functools import partial
 from utils import saveimg
+from model_utils import uball_project
 
 '''import argparse
 parser = argparse.ArgumentParser()
@@ -29,7 +30,7 @@ args = parser.parse_args()'''
 class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
-                        sigma_L = 0.005, # Noise level cutoff
+                        sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01      # Initial step size
                         ):
         super(ImMAP, self).__init__()
@@ -139,10 +140,15 @@ class ImMAP(nn.Module):
                 # derivative is -A^T(y-Ax) - p_t(x_t-x) = 0
                 # so, solve for x
                 # A^Ty+p_tx_t = (A^TA + p_t*I)x, conjugate gradient here!
+                '''
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
                 prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                '''
+
+                # Use derived result for prox of l2 norm
+                prox_update = x_hat_t - uball_project(p_t*x_hat_t)
 
                 # Perform update
                 x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
@@ -155,6 +161,7 @@ class ImMAP(nn.Module):
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                 saveimg(x_t, fname)
         return x_t
+
 
 
 def main():
