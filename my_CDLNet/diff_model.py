@@ -140,25 +140,26 @@ class ImMAP(nn.Module):
                 # derivative is -A^T(y-Ax) - p_t(x_t-x) = 0
                 # so, solve for x
                 # A^Ty+p_tx_t = (A^TA + p_t*I)x, conjugate gradient here!
-                '''
+                
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
                 prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                
                 '''
-
-                # Use derived result for prox of l2 norm
+                # Use derived result for prox of l2 norm - this doesn't work!!!!!
                 prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
-
+                '''
                 # Perform update
                 x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
-                t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+
+                t = t + 1
             if save_dir:
-                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
         return x_t
 
