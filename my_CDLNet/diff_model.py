@@ -148,7 +148,7 @@ class ImMAP(nn.Module):
                 '''
 
                 # Use derived result for prox of l2 norm
-                prox_update = x_hat_t - uball_project(p_t*x_hat_t)
+                prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
 
                 # Perform update
                 x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
