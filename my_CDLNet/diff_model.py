@@ -16,14 +16,14 @@ from pprint import pprint
 from functools import partial
 from utils import saveimg
 
-import argparse
+'''import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("args_fn", type=str, help="Path to args.json file.", default="args.json")
 parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = None)
 parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
 parser.add_argument("--save_dir", type=str, help="Directory to save iterations to", default = None)
 
-args = parser.parse_args()
+args = parser.parse_args()'''
 
 # This code will implement ImMAP: Implicit Maximum a Posteriori estimation for MRI reconstruction
 class ImMAP(nn.Module):
@@ -37,8 +37,9 @@ class ImMAP(nn.Module):
         self.beta = beta
         self.sigma_L = sigma_L
         self.h_0 = h_0
+        self.lam = 1.
     
-    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None): # Provide a y to condition on
+    def init_diff(self, y, noise_level):
         # Get a random image 
         x_t = torch.randn(y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
         x_t = x_t[None, None, :, :]
@@ -47,10 +48,17 @@ class ImMAP(nn.Module):
         sigma_t = torch.Tensor([1.])
         sigma_t = sigma_t.to(y.device)
         sigma_t_prev = sigma_t
+        # Add noise to y
+        noisy_y = y + noise_level * torch.randn_like(y)
+
+        return x_t, t, sigma_t, sigma_t_prev, noisy_y
+
+    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None): # Provide a y to condition on
+        # Set initial conditions
+        x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
+
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
-        # Add noise to y
-        y = y + noise_level * torch.randn_like(y)
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
@@ -90,17 +98,71 @@ class ImMAP(nn.Module):
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}") 
                 sigma_t_prev = sigma_t
-            fname = os.path.join(save_dir, "diffusion_final_iteration.png")
-            saveimg(x_t, fname)
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
         return x_t
 
-def main(args):
+    def forward_2(self, y, noise_level, acceleration_map, smaps, save_dir = None):
+        # Implement ImMAP 2!
+        # Set initial conditions
+        x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
+        sigma_y = noise_level
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                # Get noise level estimate
+                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                sigma_t = torch.sqrt(sigma_t_sq)
+
+                # Compute proximal weighting
+                p_t = self.lam*sigma_y / (sigma_t_sq/(1+sigma_t_sq))
+               
+                # update step size
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+
+                # Update noise injection
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                
+                # draw random noise
+                noise = torch.randn_like(x_t)
+                
+                # compute proximal update:
+                # We want to compute prox_{D/p_t}(x_t)
+                # argmin 1/2||y-Ax||^2 + p_t/2||x_t-x||^2
+                # derivative is -A^T(y-Ax) - p_t/2(x_t-x) = 0
+                # so, solve for x
+                # A^Ty+p_t/2x_t = (A^TA + p_t/2*I)x, conjugate gradient here!
+
+                def A(x, p_t = p_t, E = E, EH = EH):
+                    return EH(E(x)) + p_t/2*x
+                
+                prox_update, tol_reached = conj_grad(A, torch.squeeze(x_hat_t), max_iter = 1e5, tol=1e-2, verbose = False)
+
+                # Perform update
+                x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                    saveimg(x_t, fname)
+                t = t + 1
+                print(f"Iteration {t} complete. Noise level: {sigma_t}")
+                sigma_t_prev = sigma_t
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
+        return x_t
+
+
+def main():
+    # test on one specific sample
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
     slice = 3
 
-    kspace_fname = args.kspace_path
+    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000514.h5"
     fname = os.path.basename(kspace_fname)
 
     # Search in val dir for corresponding smaps
@@ -113,15 +175,10 @@ def main(args):
 
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
-    # Squeeze smaps, also conjugate since they come as conjugated form
-    # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)
     # breakpoint()
-    # smaps = walsh_smaps(ifftc(kspace[None]))
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
-    # Detect acceleration maps
-    #mask = detect_acc_mask(kspace)
     
     _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 8, acs_lines = 24)
     # Send to GPU
@@ -132,28 +189,20 @@ def main(args):
     # Mask kspace
     kspace_masked = mask * kspace
     # Get noise level 
-    noise_level = args.noise_level
+    noise_level = 0.05
 
     # Load CDLNet denoiser
-    model_args_file = open(args.args_fn)
+    model_args_file = open("config.json")
     model_args = json.load(model_args_file)
     pprint(model_args)
     
-    # Verify kspace and smap stuff works
-    
-    # Check EHy
-    # breakpoint()
-    # EHy = mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = smaps.device), smaps)
-    # saveimg(EHy, "Ehy.png")
-    # breakpoint()
+    save_dir = "diff_figs"
 
-    save_dir = args.save_dir
-
-    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
+    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = False)
     net.eval()
     immap = ImMAP(net)
-    test = immap(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
     breakpoint()
 
 if __name__ == "__main__":
-    main(args)
+    main()

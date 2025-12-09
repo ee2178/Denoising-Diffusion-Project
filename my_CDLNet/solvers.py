@@ -14,25 +14,43 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
     p = r.clone()
     x = x0
     tol_reached = False
-    for k in tqdm(range(int(max_iter))):
-        # Apply operator to p
-        Ap = A(p)
-        # Implement inner products as elementwise sums
-        rsold = torch.sum(r.conj() * r)
-        alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8) 
-        x_next = x + alpha * p
-        r_next = r - alpha * Ap
-        rsnew = torch.sum(r_next.conj() * r)
+    if verbose:
+        for k in tqdm(range(int(max_iter))):
+            # Apply operator to p
+            Ap = A(p)
+            # Implement inner products as elementwise sums
+            rsold = torch.sum(r.conj() * r)
+            alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8) 
+            x_next = x + alpha * p
+            r_next = r - alpha * Ap
+            rsnew = torch.sum(r_next.conj() * r)
         
-        if torch.sqrt(rsnew.real) <= tol:
-            tol_reached = True
-            return x_next, tol_reached
-        beta = rsnew/rsold
-        p = r_next + beta * p
-        r = r_next
-        x = x_next
-        if verbose:
+            if torch.sqrt(rsnew.real) <= tol:
+                tol_reached = True
+                return x_next, tol_reached
+            beta = rsnew/rsold
+            p = r_next + beta * p
+            r = r_next
+            x = x_next
             res = rsnew.real
             print(f"Iteration: {k}, Residual: {res}")
+    else:
+        for k in range(int(max_iter)):
+            # Apply operator to p
+            Ap = A(p)
+            # Implement inner products as elementwise sums
+            rsold = torch.sum(r.conj() * r)
+            alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8)
+            x_next = x + alpha * p
+            r_next = r - alpha * Ap
+            rsnew = torch.sum(r_next.conj() * r)
+            if torch.sqrt(rsnew.real) <= tol:
+                tol_reached = True
+                return x_next, tol_reached
+            beta = rsnew/rsold
+            p = r_next + beta * p
+            r = r_next
+            x = x_next
+
     return x, tol_reached
 
