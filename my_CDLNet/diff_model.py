@@ -135,9 +135,9 @@ class ImMAP(nn.Module):
                 # compute proximal update:
                 # We want to compute prox_{D/p_t}(x_t)
                 # argmin 1/2||y-Ax||^2 + p_t/2||x_t-x||^2
-                # derivative is -A^T(y-Ax) - p_t/2(x_t-x) = 0
+                # derivative is -A^T(y-Ax) - p_t(x_t-x) = 0
                 # so, solve for x
-                # A^Ty+p_t/2x_t = (A^TA + p_t/2*I)x, conjugate gradient here!
+                # A^Ty+p_tx_t = (A^TA + p_t*I)x, conjugate gradient here!
 
                 def A(x, p_t = p_t, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
@@ -151,9 +151,8 @@ class ImMAP(nn.Module):
                     saveimg(x_t, fname)
                 t = t + 1
                 print(f"Iteration {t} complete. Noise level: {sigma_t}")
-                sigma_t_prev = sigma_t
             if save_dir:
-                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                 saveimg(x_t, fname)
         return x_t
 
@@ -165,7 +164,7 @@ def main():
     print(f"Using device {device}.")
     slice = 3
 
-    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000514.h5"
+    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     fname = os.path.basename(kspace_fname)
 
     # Search in val dir for corresponding smaps
@@ -199,7 +198,7 @@ def main():
     model_args = json.load(model_args_file)
     pprint(model_args)
     
-    save_dir = "diff_figs"
+    save_dir = None
 
     net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = False)
     net.eval()
