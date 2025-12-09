@@ -31,14 +31,15 @@ class ImMAP(nn.Module):
     def __init__(self,  denoiser,       # Denoiser to embed image prior
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
-                        h_0 = 0.01      # Initial step size
+                        h_0 = 0.01,      # Initial step size
+                        lam = 2.        # Parameter for immap2
                         ):
         super(ImMAP, self).__init__()
         self.denoiser = denoiser
         self.beta = beta
         self.sigma_L = sigma_L
         self.h_0 = h_0
-        self.lam = 1.
+        self.lam = lam
     
     def init_diff(self, y, noise_level):
         # Get a random image 
