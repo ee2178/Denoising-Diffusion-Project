@@ -142,7 +142,7 @@ class ImMAP(nn.Module):
                 def A(x, p_t = p_t, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
-                prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1e5, tol=1e-2, verbose = False)
+                prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1e5, tol=1e-3, verbose = False)
 
                 # Perform update
                 x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
@@ -192,6 +192,8 @@ def main():
     kspace_masked = mask * kspace
     # Get noise level 
     noise_level = 0.05
+    
+    gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
 
     # Load CDLNet denoiser
     model_args_file = open("config.json")
