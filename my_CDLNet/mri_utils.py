@@ -35,6 +35,30 @@ def mri_decoding(y, acceleration_map, smaps):
     x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
     return x
 
+def batched_mri_encoding(x, acceleration_map, smaps):
+    # x is slices x H x W
+    # smaps is slices x coils x H x W 
+    # Flatten x for einsum 
+    x = x[0]
+    x_coils = torch.einsum("ijkl, ikl -> ijkl", smaps, x)
+    # x_coils is C x N x N
+    y_coils = fftc(x_coils)
+    # y_coils is C x N x N
+    mask = acceleration_map
+    y_mask = y_coils * mask[None]
+    return y_mask
+
+def batched_mri_decoding(y, acceleration_map, smaps):
+    # Apply mask to each channel of y
+    y_mask = y * acceleration_map[None]
+    # Apply ifft2
+    x_coils = ifftc(y_mask)
+    # Coil combination
+    x = torch.einsum("bijk, bijk -> bjk", smaps.conj(), x_coils)
+    # Add a batch dim 
+    x = x[None]
+    return x
+
 
 def check_adjoint(E, EH, smaps):
     x = torch.randn(smaps.shape[1], smaps.shape[2],  dtype = torch.cfloat)
@@ -195,3 +219,38 @@ def fftc(x, dim = (-2, -1), mode = 'ortho'):
 
 def ifftc(x, dim = (-2, -1), mode = 'ortho'):
     return fft.fftshift(fft.ifftn(fft.ifftshift(x, dim = dim), dim = dim, norm = mode), dim = dim)
+
+def quant_tensor(x, n_bits, clipping_factor=1.0):
+    M = torch.max(torch.abs(x))
+    R = clipping_factor*M
+    # Clip to -R, R
+    x_clipped = torch.clip(x, -R, R)
+    # Compute the scale
+    s = 2**n_bits-2
+    scale = 2*R/s
+    # Get x_int
+    x_int = torch.round(x_clipped/scale)
+    x_quant = x_int*scale
+    return x_quant
+
+def quant_smaps(smaps, n_bits, mag_quant = False, clipping_factor = 1.0):
+    # Attempt to quantize sensitivity maps
+
+    # Approach 1: Try to quantize real and imag parts separately
+    if mag_quant == False:
+        smaps_real = smaps.real
+        smaps_imag = smaps.imag
+    
+        smaps_real_quant = quant_tensor(smaps_real, n_bits, clipping_factor)
+        smaps_imag_quant = quant_tensor(smaps_imag, n_bits, clipping_factor)
+
+        return torch.complex(smaps_real_quant, smaps_imag_quant)
+    # Approach 2: Try to quantize magnitude and phase
+    if mag_quant == True:
+        smaps_mag = smaps.abs()
+        smaps_phase = smaps.angle()
+        
+        smaps_mag_quant = quant_tensor(smaps_mag, n_bits, clipping_factor)
+        smaps_phase_quant = quant_tensor(smaps_phase, n_bits, clipping_factor)
+
+        return smaps_mag * torch.exp(1j * smaps_phase_quant)

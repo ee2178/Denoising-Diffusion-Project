@@ -50,6 +50,7 @@ def prep_data(fname, device, slice, smap_path, kspace_path, K = 2e3):
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace
+
     return kspace, kspace_masked, mask, smaps, gnd_truth
 
 def compute_metrics(args, device):
@@ -61,11 +62,13 @@ def compute_metrics(args, device):
     noise_level = args.noise_level
     # kspace_fname = args.kspace_path
     # fname = os.path.basename(kspace_fname)
+    NRMSE = 0
     PSNR = 0
     SSIM = 0
     count = 0
+    n_diverged = 0
     # Load ImMAP 
-    net, _, _, epoch0 = train.init_model(model_args, device=device)
+    net, _, _, _= train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
     immap = ImMAP(net)
 
@@ -75,33 +78,46 @@ def compute_metrics(args, device):
         if fname.startswith('file_brain_AXT2'):
             for slice in range(min_slice, max_slice):
                 kspace, kspace_masked, mask, smaps, gnd_truth = prep_data(fname, device, slice, args.smap_path, args.kspace_path)
-                recon = immap.forward_2(kspace_masked, noise_level, mask, smaps)
+                recon = immap(kspace_masked, noise_level, mask, smaps)
+                if torch.sum(torch.isnan(recon)) > 0:
+                    print(f"{fname} diverged. Skipping this sample")
+                    n_diverged = n_diverged + 1
+                    break
                 # Compute PSNR
                 PSNR = PSNR + psnr(recon, gnd_truth)
+                # Compute NRMSE
+                NRMSE = NRMSE + nrmse(gnd_truth, recon)
                 # Compute SSIM
                 SSIM = SSIM + ssim(recon, gnd_truth)
                 # Increment count
                 count = count + 1
 
-                if count <= (max_slice - min_slice)*10:
-                    break
-
-    PSNR = PSNR / count
-    SSIM = SSIM / count
-    return PSNR, SSIM
+        if count >= (max_slice - min_slice)*5:
+            break
+    NRMSE = NRMSE / (count-n_diverged)
+    PSNR = PSNR / (count-n_diverged)
+    SSIM = SSIM / (count-n_diverged)
+    return NRMSE, PSNR, SSIM, n_diverged
 
 def main(args):
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    psnr, ssim = compute_metrics(args, device)
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
     with open(args.save_name, 'w') as f:
+        f.write(f'NRMSE: {nrmse}\n')
         f.write(f'PSNR: {psnr} \n')
-        f.write(f'SSIM: {ssim}')
+        f.write(f'SSIM: {ssim} \n')
+        f.write(f'Diverged: {n_diverged}')
 
 def psnr(x, y):
     mse = torch.mean((x-y).abs()**2)
     return -10*torch.log10(mse)
+
+def nrmse(x, y):
+    rmse = torch.sqrt(torch.mean((x-y).abs()**2))
+    dyn_range = torch.max(x.abs()) - torch.min(x.abs())
+    return rmse/dyn_range
 
 # Gaussian window
 def gaussian_window(size=11, sigma=1.5):
@@ -109,6 +125,10 @@ def gaussian_window(size=11, sigma=1.5):
     g = torch.exp(-(coords ** 2) / (2 * sigma * sigma))
     g = g / g.sum()
     w = torch.outer(g, g)
+    # Gaussian window normalization
+    w = w / w.sum()
+    # reshape to (1,1,k,k) so conv2d works properly
+    w = w.view(1, 1, size, size)
     return w
 
 def complex_conv2d(img, weight, window_size):
@@ -123,8 +143,8 @@ def ssim(x, y, window_size=11):
     Compute SSIM for complex-valued images x and y.
     Shapes: (N, C, H, W), dtype: complex64/complex128
     """
-    C1 = 1e-5
-    C2 = 1e-5
+    C1 = 1e-4
+    C2 = 9e-4
       
     # 1. Convert complex → magnitude
     x_mag = torch.abs(x)

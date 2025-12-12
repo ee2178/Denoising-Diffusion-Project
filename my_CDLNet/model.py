@@ -5,6 +5,8 @@ import numpy as np
 import sys
 
 from model_utils import uball_project, pre_process, post_process, power_method
+from mri_utils import batched_mri_encoding, batched_mri_decoding
+from functools import partial
 
 def ST(x, t):
     ''' 
@@ -247,11 +249,23 @@ class LPDSNet(nn.Module):
         self.eta = nn.Parameter(eta_0 * torch.ones(K, 1))
         self.theta = nn.Parameter(theta_0 * torch.ones(K, 1))
 
-    def forward(self, y, sigma=None, mask = 1):
+    def forward(self, y, sigma=None, mask = None, smaps = None, mri = False):
+        # Will need to do this for MRI reconstruction
+        # set up encoding/decoding operators
+        # Flatten y, smaps
+        if mri:
+            y = torch.squeeze(y)
+            smaps = torch.squeeze(smaps)
+            E = partial(batched_mri_encoding, acceleration_map = mask, smaps = smaps)
+            EH = partial(batched_mri_decoding, acceleration_map = mask, smaps = smaps)
+        else:
+            E = self.E
+            EH = self.EH
         # Apply forward measurement operator 
-        EHy = self.EH(y)
+        EHy = EH(y)
+        
         # mean subtraction and stride padding 
-        yp, params = pre_process(EHy, self.s, mask = mask)
+        yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
         c = 0 if sigma is None or not self.adaptive else sigma/255.0
         # Take first steps (K = 1)
@@ -263,7 +277,7 @@ class LPDSNet(nn.Module):
         
         # Perform K-1 LDPS  iterations
         for k in range(1, self.K):
-            x = x - self.eta[k]*(self.EH(self.E(x))-yp+self.B[k](z))
+            x = x - self.eta[k]*(EH(E(x))-yp+self.B[k](z))
             xp = x + self.theta[k]*(x-xprev)
             z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
             xprev = x

@@ -9,7 +9,7 @@ import train
 import os
 import gc
 
-from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask
+from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_smaps, quant_tensor
 from functorch import jacrev, jacfwd
 from solvers import conj_grad
 from pprint import pprint
@@ -55,7 +55,7 @@ class ImMAP(nn.Module):
 
         return x_t, t, sigma_t, sigma_t_prev, noisy_y
 
-    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None): # Provide a y to condition on
+    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = False): # Provide a y to condition on
         # Set initial conditions
         x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
 
@@ -70,7 +70,6 @@ class ImMAP(nn.Module):
                 x_hat_t = denoise(x_t, sigma_t)
                 # Get noise level estimate
                 sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                sigma_t = torch.sqrt(sigma_t_sq)
                 # Tweedie's formula
                 grad_prior = x_hat_t - x_t
                 # PiGDM Laplace Approx (use * operator because the forward operator E starts with elementwise multiplication
@@ -89,6 +88,7 @@ class ImMAP(nn.Module):
                 grad_likelihood = -1*sigma_t_sq*grad_likelihood
                 # Update step size
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                sigma_t = torch.sqrt(sigma_t_sq)
                 # Update noise injection
                 gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
                 noise = torch.randn_like(x_t)
@@ -98,14 +98,20 @@ class ImMAP(nn.Module):
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
                 t = t + 1
-                print(f"Iteration {t} complete. Noise level: {sigma_t}") 
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}") 
+                if sigma_t > sigma_t_prev:
+                    # Raise flag if noise is greater at next iteration
+                    print("Noise is diverging...")
+                    continue
                 sigma_t_prev = sigma_t
+                
             if save_dir:
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
         return x_t
 
-    def forward_2(self, y, noise_level, acceleration_map, smaps, save_dir = None):
+    def forward_2(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
         # Implement ImMAP 2!
         # Set initial conditions
         x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
@@ -156,14 +162,25 @@ class ImMAP(nn.Module):
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
-                print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
 
                 t = t + 1
             if save_dir:
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
         return x_t
-
+    def forward_quant(self, y, noise_level, acceleration_map, smaps, save_dir = None, mode = 2, n_bits = 4):
+        # A method to experiment with different quantization steps within diffusion process
+        # We will focus mostly on quantization of smaps
+        
+        smaps_quant = quant_smaps(smaps, n_bits, mag_quant = False, clipping_factor = 1.0)
+        # smaps_quant = smaps
+        if mode == 2:
+            out = self.forward_2(y, noise_level, acceleration_map, smaps, save_dir)
+        if mode == 1:
+            out = self.forward(y, noise_level, acceleration_map, smaps, save_dir)
+        return out
 
 
 def main():
@@ -205,16 +222,16 @@ def main():
     gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
 
     # Load CDLNet denoiser
-    model_args_file = open("config.json")
+    model_args_file = open("eval_config.json")
     model_args = json.load(model_args_file)
     pprint(model_args)
     
-    save_dir = None
+    save_dir = "diff_figs"
 
-    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = False)
+    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
     immap = ImMAP(net)
-    test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_quant(kspace_masked, noise_level, mask, smaps, save_dir)
     breakpoint()
 
 if __name__ == "__main__":
