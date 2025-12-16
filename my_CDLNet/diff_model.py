@@ -298,7 +298,8 @@ def main():
 
     lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
     # Make a noisy kspace measurement
-
+    noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
+    e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
     breakpoint()
 
     immap = ImMAP(net)

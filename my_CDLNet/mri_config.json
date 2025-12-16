@@ -10,7 +10,7 @@
 },
 "paths": {
 	"save": "trained_nets/LPDSNet_MRI_Recon",
-	"ckpt": null
+	"ckpt": "trained_nets/LPDSNet_MRI_Recon/net.ckpt"
 },
 "train": {
 	"loaders": {
