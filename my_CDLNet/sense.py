@@ -12,8 +12,8 @@ from functools import partial
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = None)
-parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
+parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = '../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5')
+parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.05)
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
@@ -30,7 +30,7 @@ def sense(y, acceleration_map, smaps, verbose):
     # If we have y = Ex, then we want to work with E^Hy = E^HEx, i.e. our symmetric operator is EHE
     EHy = EH(y)
     
-    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 50, verbose = verbose)
+    return conj_grad(EHE, EH(y), tol = 1e-6, max_iter = 500, verbose = verbose)
 
 def main(args):
     ngpu = torch.cuda.device_count()
@@ -53,7 +53,7 @@ def main(args):
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
-    kspace = kspace.to(device)*2e2
+    kspace = kspace.to(device)*2e3
     mask = mask.to(device)
     # Mask kspace
     kspace_masked = mask * kspace

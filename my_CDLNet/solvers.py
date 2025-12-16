@@ -33,7 +33,7 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
             r = r_next
             x = x_next
             res = rsnew.real
-            print(f"Iteration: {k}, Residual: {res}")
+            # print(f"Iteration: {k}, Residual: {res}")
     else:
         for k in range(int(max_iter)):
             # Apply operator to p
