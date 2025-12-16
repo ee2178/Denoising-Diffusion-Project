@@ -4,12 +4,12 @@
 	"adaptive": true,
 	"K": 30,
 	"M": 169,
-	"C": 8,
+	"C": 1,
 	"P": 7,
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/LPDSNet",
+	"save": "trained_nets/LPDSNet_MRI_Recon",
 	"ckpt": null
 },
 "train": {
@@ -26,7 +26,7 @@
 	},
 	"fit": {
 		"epochs": 6000,
-		"noise_std": [0,25],
+		"noise_std": [10, 13],
 		"val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 2,

@@ -78,7 +78,7 @@ def compute_metrics(args, device):
         if fname.startswith('file_brain_AXT2'):
             for slice in range(min_slice, max_slice):
                 kspace, kspace_masked, mask, smaps, gnd_truth = prep_data(fname, device, slice, args.smap_path, args.kspace_path)
-                recon = immap(kspace_masked, noise_level, mask, smaps)
+                recon = immap.forward_quant_smaps(kspace_masked, noise_level, mask, smaps, mode = 1)
                 if torch.sum(torch.isnan(recon)) > 0:
                     print(f"{fname} diverged. Skipping this sample")
                     n_diverged = n_diverged + 1

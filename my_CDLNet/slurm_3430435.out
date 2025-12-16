@@ -1,0 +1,196 @@
+{'model': {'C': 1, 'K': 30, 'M': 169, 'P': 7, 'adaptive': True, 's': 2},
+ 'paths': {'ckpt': None, 'save': 'trained_nets/LPDSNet'},
+ 'train': {'fit': {'backtrack_thresh': 2,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'epochs': 6000,
+                   'mcsure': False,
+                   'noise_std': [0, 126],
+                   'save_freq': 5,
+                   'val_freq': 50,
+                   'verbose': True},
+           'loaders': {'batch_size': 10,
+                       'crop_size': 256,
+                       'end_slice': 8,
+                       'load_color': False,
+                       'scaling_fac': 2000.0,
+                       'start_slice': 0,
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']},
+           'opt': {'lr': 0.001},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'LPDSNet'}
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train']:
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']:
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test']:
+Running power-method on initial dictionary...
+Done. L=3.554e+03+1.442e-06j.
+Total Number of Parameters: 755,490
+Using trained_nets/LPDSNet ...
+fit: using device cuda:0
+TRAIN PSNR: 24.825 dB
+TRAIN PSNR: 26.644 dB
+TRAIN PSNR: 26.927 dB
+TRAIN PSNR: 27.076 dB
+TRAIN PSNR: 27.208 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.331 dB
+TRAIN PSNR: 27.284 dB
+TRAIN PSNR: 27.333 dB
+TRAIN PSNR: 27.386 dB
+TRAIN PSNR: 27.410 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.509 dB
+TRAIN PSNR: 27.585 dB
+TRAIN PSNR: 27.586 dB
+TRAIN PSNR: 27.624 dB
+TRAIN PSNR: 27.627 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.527 dB
+TRAIN PSNR: 27.560 dB
+TRAIN PSNR: 27.550 dB
+TRAIN PSNR: 27.560 dB
+TRAIN PSNR: 27.641 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.671 dB
+TRAIN PSNR: 27.608 dB
+TRAIN PSNR: 27.647 dB
+TRAIN PSNR: 27.647 dB
+TRAIN PSNR: 27.731 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.708 dB
+TRAIN PSNR: 27.687 dB
+TRAIN PSNR: 27.694 dB
+TRAIN PSNR: 27.739 dB
+TRAIN PSNR: 27.611 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.759 dB
+TRAIN PSNR: 27.717 dB
+TRAIN PSNR: 27.740 dB
+TRAIN PSNR: 27.667 dB
+TRAIN PSNR: 27.679 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.688 dB
+TRAIN PSNR: 27.769 dB
+TRAIN PSNR: 27.713 dB
+TRAIN PSNR: 27.773 dB
+TRAIN PSNR: 27.699 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.751 dB
+TRAIN PSNR: 27.750 dB
+TRAIN PSNR: 27.674 dB
+TRAIN PSNR: 27.613 dB
+TRAIN PSNR: 27.665 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.773 dB
+TRAIN PSNR: 27.852 dB
+TRAIN PSNR: 27.702 dB
+TRAIN PSNR: 27.680 dB
+TRAIN PSNR: 27.757 dB
+VAL PSNR: 29.784 dB
+Updated Learning Rate(s): 
+[0.00095]
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.834 dB
+TRAIN PSNR: 27.714 dB
+TRAIN PSNR: 27.758 dB
+TRAIN PSNR: 27.791 dB
+TRAIN PSNR: 27.849 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.768 dB
+TRAIN PSNR: 27.855 dB
+TRAIN PSNR: 27.774 dB
+TRAIN PSNR: 27.814 dB
+TRAIN PSNR: 27.858 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.739 dB
+TRAIN PSNR: 27.688 dB
+TRAIN PSNR: 27.822 dB
+TRAIN PSNR: 27.790 dB
+TRAIN PSNR: 27.751 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.740 dB
+TRAIN PSNR: 27.882 dB
+TRAIN PSNR: 27.808 dB
+TRAIN PSNR: 27.832 dB
+TRAIN PSNR: 27.814 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.818 dB
+TRAIN PSNR: 27.822 dB
+TRAIN PSNR: 27.820 dB
+TRAIN PSNR: 27.857 dB
+TRAIN PSNR: 27.810 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.829 dB
+TRAIN PSNR: 27.914 dB
+TRAIN PSNR: 27.755 dB
+TRAIN PSNR: 27.831 dB
+TRAIN PSNR: 27.855 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.894 dB
+TRAIN PSNR: 27.805 dB
+TRAIN PSNR: 27.812 dB
+TRAIN PSNR: 27.840 dB
+TRAIN PSNR: 27.815 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.738 dB
+TRAIN PSNR: 27.866 dB
+TRAIN PSNR: 27.826 dB
+TRAIN PSNR: 27.807 dB
+TRAIN PSNR: 27.812 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.808 dB
+TRAIN PSNR: 27.862 dB
+TRAIN PSNR: 27.769 dB
+TRAIN PSNR: 27.825 dB
+TRAIN PSNR: 27.866 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.827 dB
+TRAIN PSNR: 27.847 dB
+TRAIN PSNR: 27.845 dB
+TRAIN PSNR: 27.840 dB
+TRAIN PSNR: 27.841 dB
+VAL PSNR: 29.844 dB
+Updated Learning Rate(s): 
+[0.0009025]
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.862 dB
+TRAIN PSNR: 27.851 dB
+TRAIN PSNR: 27.873 dB
+TRAIN PSNR: 27.808 dB
+TRAIN PSNR: 27.836 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.895 dB
+TRAIN PSNR: 27.919 dB
+TRAIN PSNR: 27.809 dB
+TRAIN PSNR: 27.970 dB
+TRAIN PSNR: 27.883 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.816 dB
+TRAIN PSNR: 27.863 dB
+TRAIN PSNR: 27.845 dB
+TRAIN PSNR: 27.813 dB
+TRAIN PSNR: 27.915 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.817 dB
+TRAIN PSNR: 27.884 dB
+TRAIN PSNR: 27.869 dB
+TRAIN PSNR: 27.949 dB
+TRAIN PSNR: 27.886 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.854 dB
+TRAIN PSNR: 27.875 dB
+TRAIN PSNR: 27.897 dB
+TRAIN PSNR: 27.798 dB
+TRAIN PSNR: 27.868 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.856 dB
+TRAIN PSNR: 27.848 dB
+TRAIN PSNR: 27.890 dB
+TRAIN PSNR: 27.947 dB
+TRAIN PSNR: 27.887 dB
+Checkpoint: trained_nets/LPDSNet/net.ckpt
+TRAIN PSNR: 27.861 dB
+TRAIN PSNR: 27.915 dB
+TRAIN PSNR: 27.863 dB

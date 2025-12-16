@@ -11,7 +11,7 @@ import torchvision.transforms.functional as F
 from tqdm import tqdm
 
 class MRIKSpaceDataset(data.Dataset):
-    def __init__(self, root_dirs, kspace_dirs, transform, scaling_fac = 2e3):
+    def __init__(self, root_dirs, kspace_dirs, transform, scaling_fac = 2e3, start_slice=0, end_slice=10):
         self.image_paths = []
         self.kspace_paths = []
 
@@ -33,22 +33,25 @@ class MRIKSpaceDataset(data.Dataset):
         self.kspace_dirs = kspace_dirs
         self.transform = transform
         self.scaling_fac = scaling_fac
+        self.start_slice = start_slice
+        self.end_slice = end_slice
     def __len__(self):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
         # Get an entire volume, starting at start_slice, ending at end_slice
+        slice = np.random.randint(self.start_slice, self.end_slice)
         with h5py.File(self.image_paths[idx]) as f:
-            image = f['image'][0:8][np.newaxis, :, :]
-            smaps = f['smaps'][0:8]
+            image = f['image'][slice][np.newaxis, :, :]
+            smaps = f['smaps'][slice]
         # Find corresponding kspace
         with h5py.File(self.kspace_paths[idx]) as f:
-            kspace = f['kspace'][0:8]
+            kspace = f['kspace'][slice]
 
         # Send to GPU
-        image = torch.from_numpy(image)
+        image = torch.from_numpy(image)*self.scaling_fac
         smaps = torch.from_numpy(smaps)
-        kspace = torch.from_numpy(kspace)
+        kspace = torch.from_numpy(kspace)*self.scaling_fac
 
         return kspace, smaps, image
 

@@ -229,28 +229,30 @@ def quant_tensor(x, n_bits, clipping_factor=1.0):
     s = 2**n_bits-2
     scale = 2*R/s
     # Get x_int
+    # Also enable STE
+    # x_int = torch.round(x_clipped/scale) + F.relu(x_clipped/scale) - F.relu(x_clipped/scale)
     x_int = torch.round(x_clipped/scale)
     x_quant = x_int*scale
     return x_quant
 
-def quant_smaps(smaps, n_bits, mag_quant = False, clipping_factor = 1.0):
+def quant_complex(x, n_bits, mag_quant = False, clipping_factor = 1.0):
     # Attempt to quantize sensitivity maps
 
     # Approach 1: Try to quantize real and imag parts separately
     if mag_quant == False:
-        smaps_real = smaps.real
-        smaps_imag = smaps.imag
+        x_real = x.real
+        x_imag = x.imag
     
-        smaps_real_quant = quant_tensor(smaps_real, n_bits, clipping_factor)
-        smaps_imag_quant = quant_tensor(smaps_imag, n_bits, clipping_factor)
+        x_real_quant = quant_tensor(x_real, n_bits, clipping_factor)
+        x_imag_quant = quant_tensor(x_imag, n_bits, clipping_factor)
 
-        return torch.complex(smaps_real_quant, smaps_imag_quant)
+        return torch.complex(x_real_quant, x_imag_quant)
     # Approach 2: Try to quantize magnitude and phase
     if mag_quant == True:
-        smaps_mag = smaps.abs()
-        smaps_phase = smaps.angle()
+        x_mag = x.abs()
+        x_phase = x.angle()
         
-        smaps_mag_quant = quant_tensor(smaps_mag, n_bits, clipping_factor)
-        smaps_phase_quant = quant_tensor(smaps_phase, n_bits, clipping_factor)
+        x_mag_quant = quant_tensor(x_mag, n_bits, clipping_factor)
+        x_phase_quant = quant_tensor(x_phase, n_bits, clipping_factor)
 
-        return smaps_mag * torch.exp(1j * smaps_phase_quant)
+        return x_mag * torch.exp(1j * x_phase_quant)

@@ -5,7 +5,7 @@ import numpy as np
 import sys
 
 from model_utils import uball_project, pre_process, post_process, power_method
-from mri_utils import batched_mri_encoding, batched_mri_decoding
+from mri_utils import batched_mri_encoding, batched_mri_decoding, quant_complex
 from functools import partial
 
 def ST(x, t):
@@ -160,6 +160,31 @@ class CDLNet(nn.Module):
         x_hat = post_process(self.D(z), params)
         
         return x_hat, z
+
+    def forward_quant(self, y, sigma = None, mask = 1, n_bits = 32, clipping_factor = 1.):
+        # mean subtraction and stride padding 
+        yp, params = pre_process(y, self.s, mask = mask)
+        # Quantize yp
+        yp_quant = quant_complex(yp, n_bits, clipping_factor)
+        # Threshold scale factor
+        c = 0 if sigma is None or not self.adaptive else sigma/255.0
+        # Perform K ISTA iterations
+        # Initialize zp:
+        # z_next = ST(z - A^T(Bz-y), thresh), but first z_0 = 0
+        temp = self.A[0](yp_quant)
+        z = ST(temp, self.t[0,:1] + c*self.t[0,1:2])
+        # Quantize z
+        z_quant = quant_complex(z, n_bits, clipping_factor)
+        for k in range(self.K):
+            temp = mask* self.B[k](z_quant)
+            # z = ST(z - self.A[k](temp-yp[:, :, 0:temp.shape[2], 0:temp.shape[3]]), self.t[k, 0:1] + c * self.t[k, 1:2])
+            z = ST(z_quant - self.A[k](temp-yp_quant), self.t[k, 0:1]+c*self.t[k, 1:2])
+            z_quant = quant_complex(z, n_bits, clipping_factor)
+        # x_hat = Dz
+        # Let's not quantize the output
+        x_hat = post_process(self.D(z), params)
+        return x_hat, z
+
     
     def forward_generator(self, y, sigma=None, mask=1):
         """ same as forward but yields intermediate sparse codes
@@ -254,8 +279,8 @@ class LPDSNet(nn.Module):
         # set up encoding/decoding operators
         # Flatten y, smaps
         if mri:
-            y = torch.squeeze(y)
-            smaps = torch.squeeze(smaps)
+            # y = torch.squeeze(y)
+            # smaps = torch.squeeze(smaps)
             E = partial(batched_mri_encoding, acceleration_map = mask, smaps = smaps)
             EH = partial(batched_mri_decoding, acceleration_map = mask, smaps = smaps)
         else:
@@ -263,7 +288,6 @@ class LPDSNet(nn.Module):
             EH = self.EH
         # Apply forward measurement operator 
         EHy = EH(y)
-        
         # mean subtraction and stride padding 
         yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
@@ -281,6 +305,7 @@ class LPDSNet(nn.Module):
             xp = x + self.theta[k]*(x-xprev)
             z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
             xprev = x
+    
         x_hat = post_process(x, params)
         return x_hat, z
     
