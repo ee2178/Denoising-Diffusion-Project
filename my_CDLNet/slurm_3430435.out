@@ -194,3 +194,4 @@ Checkpoint: trained_nets/LPDSNet/net.ckpt
 TRAIN PSNR: 27.861 dB
 TRAIN PSNR: 27.915 dB
 TRAIN PSNR: 27.863 dB
+TRAIN PSNR: 27.882 dB

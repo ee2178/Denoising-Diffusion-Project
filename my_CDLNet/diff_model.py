@@ -297,6 +297,8 @@ def main():
     lpds_args_file.close()
 
     lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
+    # Make a noisy kspace measurement
+
     breakpoint()
 
     immap = ImMAP(net)
