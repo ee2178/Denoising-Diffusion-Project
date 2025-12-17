@@ -60,7 +60,7 @@ def main(args):
     # Try adding some noise to kspace
     noise_level = args.noise_level
     kspace_masked = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    
+    breakpoint()
 
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
     saveimg(gnd_truth, "EHy.png")

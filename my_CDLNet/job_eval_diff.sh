@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32GB
 #SBATCH --time=4:00:00
-#SBATCH --job-name=ImMAP_Eval_CDLNet_w16
+#SBATCH --job-name=ImMAP2_Eval_CDLNet
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=slurm_%j.out
@@ -23,4 +23,4 @@ conda activate env      # Replace with your actual env name
 # Navigate to the directory containing train.py
 
 cd ~/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet       # Replace with the actual path
-python3 eval_diff.py eval_config.json --kspace_path=../../datasets/fastmri/brain/multicoil_val --smap_path=../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val/ --noise_level=0.05 --save_name="eval_results/cdlnet_w8_sq_4immap.txt"
+python3 eval_diff.py eval_config.json --kspace_path=../../datasets/fastmri/brain/multicoil_val --smap_path=../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val/ --noise_level=0.05 --save_name="eval_results/cdl_immap2.txt"
