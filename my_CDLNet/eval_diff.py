@@ -22,6 +22,8 @@ parser.add_argument("--smap_path", type = str, help = "Corresponding path where 
 parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.)
 parser.add_argument("--slice_range", type = tuple, help="Slice range for evaluation per volume", default = (0, 8))
 parser.add_argument("--save_name", type = str, help="Name of file to save results to", default="results.txt")
+parser.add_argument("--eval_e2e", type = bool, help="True if want to evaluate e2e LPDSNet", default=False)
+parser.add_argument("--e2e_path", type = str, help="Corresponding path where e2enet args can be found", default = "mri_config.json")
 
 args = parser.parse_args()
 
@@ -71,26 +73,34 @@ def compute_metrics(args, device):
     net, _, _, _= train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
     immap = ImMAP(net)
+    
+    # Load e2e LPDSNet
+    if args.eval_e2e:    
+        e2enet = init_e2e(args.e2e_path, device=device)
 
     min_slice = args.slice_range[0]
     max_slice = args.slice_range[1]
     for fname in os.listdir(args.kspace_path):
-        if fname.startswith('file_brain_AXT2'):
-            for slice in range(min_slice, max_slice):
-                kspace, kspace_masked, mask, smaps, gnd_truth = prep_data(fname, device, slice, args.smap_path, args.kspace_path)
-                recon = immap.forward_2(kspace_masked, noise_level, mask, smaps)
-                if torch.sum(torch.isnan(recon)) > 0:
-                    print(f"{fname} diverged. Skipping this sample")
-                    n_diverged = n_diverged + 1
-                    break
-                # Compute PSNR
-                PSNR = PSNR + psnr(recon, gnd_truth)
-                # Compute NRMSE
-                NRMSE = NRMSE + nrmse(gnd_truth, recon)
-                # Compute SSIM
-                SSIM = SSIM + ssim(recon, gnd_truth)
-                # Increment count
-                count = count + 1
+        with torch.no_grad():
+            if fname.startswith('file_brain_AXT2'):
+                for slice in range(min_slice, max_slice):
+                    kspace, kspace_masked, mask, smaps, gnd_truth = prep_data(fname, device, slice, args.smap_path, args.kspace_path)
+                    if not args.eval_e2e:
+                        recon = immap.forward(kspace_masked, noise_level, mask, smaps)
+                    else:
+                        recon, _ = e2enet(kspace_masked[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
+                    if torch.sum(torch.isnan(recon)) > 0:
+                        print(f"{fname} diverged. Skipping this sample")
+                        n_diverged = n_diverged + 1
+                        break
+                    # Compute PSNR
+                    PSNR = PSNR + psnr(recon, gnd_truth)
+                    # Compute NRMSE
+                    NRMSE = NRMSE + nrmse(gnd_truth, recon)
+                    # Compute SSIM
+                    SSIM = SSIM + ssim(recon, gnd_truth)
+                    # Increment count
+                    count = count + 1
 
         if count >= (max_slice - min_slice)*5:
             break
@@ -137,6 +147,14 @@ def complex_conv2d(img, weight, window_size):
     imag = F.conv2d(img.imag, weight, padding=window_size//2, groups=img.shape[1])
     
     return torch.complex(real, imag)
+
+def init_e2e(e2e_path, device):
+    # Load LPDSNet
+    lpds_args_file = open(e2e_path)
+    lpds_args = json.load(lpds_args_file)
+    lpds_args_file.close()
+    lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
+    return lpdsnet
 
 def ssim(x, y, window_size=11):
     """
