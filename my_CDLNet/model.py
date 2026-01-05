@@ -274,7 +274,7 @@ class LPDSNet(nn.Module):
         self.eta = nn.Parameter(eta_0 * torch.ones(K, 1))
         self.theta = nn.Parameter(theta_0 * torch.ones(K, 1))
 
-    def forward(self, y, sigma=None, mask = None, smaps = None, mri = False):
+    def forward(self, y, sigma=None, mask = None, smaps = None, mri = False, x_init = None):
         # Will need to do this for MRI reconstruction
         # set up encoding/decoding operators
         # Flatten y, smaps
@@ -292,17 +292,18 @@ class LPDSNet(nn.Module):
         yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
         c = 0 if sigma is None or not self.adaptive else sigma/255.0
-        # Take first steps (K = 1)
-        x = - self.eta[0]*(-yp)
-        xp = x + self.theta[0]*(x)
-        xprev = x
-        
-        z = CLIP(self.A[0](xp), self.l[0, :1] + c*self.l[1, 1:2])
-        
+
+        # If we do not want to initialize x as anything in particular, set it to 0
+        if x_init is None:
+            x_prev = torch.zeros_like(EHy)
+        else:
+            x_prev = x_init
+        z = torch.zeros_like(self.A[0](x_prev))
+       
         # Perform K-1 LDPS  iterations
-        for k in range(1, self.K):
-            x = x - self.eta[k]*(EH(E(x))-yp+self.B[k](z))
-            xp = x + self.theta[k]*(x-xprev)
+        for k in range(0, self.K):
+            x = x_prev - self.eta[k]*(EH(E(x_prev))-yp+self.B[k](z))
+            xp = x + self.theta[k]*(x-x_prev)
             z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
             xprev = x
     

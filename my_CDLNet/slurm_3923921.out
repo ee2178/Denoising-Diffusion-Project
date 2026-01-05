@@ -1,0 +1,92 @@
+{'model': {'C': 1, 'K': 30, 'M': 169, 'P': 7, 'adaptive': True, 's': 2},
+ 'mri': {'R': 8, 'acs_lines': 24},
+ 'paths': {'ckpt': None, 'save': 'trained_nets/e2e_conditioning'},
+ 'train': {'fit': {'backtrack_thresh': 2,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'denoiser_args_path': 'eval_config.json',
+                   'epochs': 6000,
+                   'image_noise_std': [0, 255],
+                   'mcsure': False,
+                   'noise_std': [10, 13],
+                   'save_freq': 5,
+                   'val_freq': 50,
+                   'verbose': True,
+                   'x_init': True},
+           'loaders': {'batch_size': 1,
+                       'crop_size': 256,
+                       'scaling_fac': 2000.0,
+                       'trn_kspace_path_list': ['../../datasets/fastmri/brain/multicoil_train'],
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train'],
+                       'tst_kspace_path_list': ['../../datasets/fastmri/brain/multicoil_test'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test'],
+                       'val_kspace_path_list': ['../../datasets/fastmri/brain/multicoil_val'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']},
+           'opt': {'lr': 0.001},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'LPDSNet'}
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train']:
+Loading ['../../datasets/fastmri/brain/multicoil_train']
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']:
+Loading ['../../datasets/fastmri/brain/multicoil_val']
+Loading ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test']:
+Loading ['../../datasets/fastmri/brain/multicoil_test']
+Running power-method on initial dictionary...
+Done. L=3.387e+03+2.371e-06j.
+Total Number of Parameters: 755,490
+Using trained_nets/e2e_conditioning ...
+fit: using device cuda:0
+Initializing net from trained_nets/LPDSNet/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Total Number of Parameters: 755,490
+Using trained_nets/LPDSNet ...
+TRAIN PSNR: 25.169 dB
+TRAIN PSNR: 26.762 dB
+TRAIN PSNR: 27.174 dB
+TRAIN PSNR: 27.371 dB
+TRAIN PSNR: 27.533 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 27.688 dB
+TRAIN PSNR: 27.678 dB
+TRAIN PSNR: 27.782 dB
+TRAIN PSNR: 27.848 dB
+TRAIN PSNR: 27.844 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 27.922 dB
+TRAIN PSNR: 27.918 dB
+TRAIN PSNR: 27.981 dB
+TRAIN PSNR: 28.005 dB
+TRAIN PSNR: 28.039 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 27.972 dB
+TRAIN PSNR: 28.040 dB
+TRAIN PSNR: 28.037 dB
+TRAIN PSNR: 28.031 dB
+TRAIN PSNR: 28.065 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 28.079 dB
+TRAIN PSNR: 28.138 dB
+TRAIN PSNR: 28.116 dB
+TRAIN PSNR: 28.112 dB
+TRAIN PSNR: 28.132 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 28.191 dB
+TRAIN PSNR: 28.203 dB
+TRAIN PSNR: 28.227 dB
+TRAIN PSNR: 28.243 dB
+TRAIN PSNR: 28.218 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 28.220 dB
+TRAIN PSNR: 28.302 dB
+TRAIN PSNR: 28.248 dB
+TRAIN PSNR: 28.273 dB
+TRAIN PSNR: 28.270 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt
+TRAIN PSNR: 28.315 dB
+TRAIN PSNR: 28.318 dB
+TRAIN PSNR: 28.333 dB
+TRAIN PSNR: 28.297 dB
+TRAIN PSNR: 28.353 dB
+Checkpoint: trained_nets/e2e_conditioning/net.ckpt

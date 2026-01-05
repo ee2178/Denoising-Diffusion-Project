@@ -240,6 +240,115 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         return x_t
 
+    def forward_2_e2econditioned(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, mode=1):
+        # This implements a version of immap that conditions on an end to end reconstruction using a separate LPDSNet
+        # Makes the approximation that E[x|x_t] = e2e_net(x_hat_t, 0, x_t, sigma_t)
+                
+        # Set initial conditions
+        x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
+        sigma_y = noise_level
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        # Precompute EHy for calculation
+        EHy = EH(y)
+        if mode == 1:
+            with torch.no_grad():
+                while sigma_t > self.sigma_L:
+                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                    # Get noise level estimate
+                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                    sigma_t = torch.sqrt(sigma_t_sq)
+                    # update step size
+                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                    # Update noise injection
+                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                    # draw random noise
+                    noise = torch.randn_like(x_t)
+                    # Instead of performing a proximal update, use our e2e_net
+                    breakpoint()
+                    x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
+                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    if t % 5 == 0 and save_dir:
+                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                        saveimg(x_t, fname)
+                    if verbose == True:
+                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
+                    t = t + 1 
+                if save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                    saveimg(x_t, fname)
+        if mode == 2:
+            # This version only does the e2e conditioning for a single step at the start
+            with torch.no_grad():
+                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                # Get noise level estimate
+                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                sigma_t = torch.sqrt(sigma_t_sq)
+                # update step size
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                # Update noise injection
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                # draw random noise
+                noise = torch.randn_like(x_t)
+                # Instead of performing a proximal update, use our e2e_net
+                x_p = e2e_net(y, noise_level, x_init = x_hat_t, mri = True)
+                x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                # Then, proceed with just regular immap
+                while sigma_t > self.sigma_L:
+                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                    # Get noise level estimate
+                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                    sigma_t = torch.sqrt(sigma_t_sq)
+                    # update step size
+                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                    # Update noise injection
+                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                    # draw random noise
+                    noise = torch.randn_like(x_t)
+                    # Instead of performing a proximal update, use our e2e_net
+                    x_p = e2e_net(x_t, sigma_t, x_init = x_hat_t, mri = True)
+                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    if t % 5 == 0 and save_dir:
+                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                        saveimg(x_t, fname)
+                    if verbose == True:
+                        print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                    t = t + 1
+                if save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                    saveimg(x_t, fname)
+    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0, 50), zeta = 0.5):
+        # Implments ImMAP 3, basically just DiffPIR
+        # Set initial conditions
+        x_t, t, _, _, y = self.init_diff(y, noise_level)
+        sigma_y = noise_level
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        # Precompute EHy for calculation
+        EHy = EH(y)
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                sigma_t = sig_t_sched[t]
+                x_t, _ = self.denoiser(x_t, sigma_t)
+                p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t**2))
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                noise = torch.randn_like(x_t)
+                def A(x, E = E, EH = EH):
+                    return EH(E(x)) + p_t*x
+                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1000, tol=1e-3, verbose = False)
+                
+                x_t = v_t + torch.sqrt(1-zeta) * h_t * (prox_update-x_t) + torch.sqrt(zeta) * gamma_t * noise
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                    saveimg(x_t, fname)
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                t = t + 1
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
+        return x_t
 
 def main():
     # test on one specific sample
@@ -275,7 +384,7 @@ def main():
     # Mask kspace
     kspace_masked = mask * kspace
     # Get noise level 
-    noise_level = 0.05
+    noise_level = 0.0
     
     gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
 
@@ -298,12 +407,12 @@ def main():
 
     lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
     # Make a noisy kspace measurement
-    noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
-    breakpoint()
+    # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
+    # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    test = immap.forward_quant(kspace_masked, noise_level, mask, smaps, save_dir)
+    # test = immap.forward_quant(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":

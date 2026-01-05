@@ -9,8 +9,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/LPDSNet_MRI_Recon",
-	"ckpt": "trained_nets/LPDSNet_MRI_Recon/net.ckpt"
+	"save": "trained_nets/e2e_conditioning",
+	"ckpt": "trained_nets/e2e_conditioning/net.ckpt"
 },
 "train": {
 	"loaders": {
@@ -27,14 +27,17 @@
 	"fit": {
 		"epochs": 6000,
 		"noise_std": [10, 13],
-		"val_freq": 50,
+		"image_noise_std": [0, 255],
+        "val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 2,
 		"verbose": true,
 		"clip_grad": 5e-2,
 		"demosaic": false,
-		"mcsure": false
-	},
+		"mcsure": false,
+        "x_init":true,
+	    "denoiser_args_path":"eval_config.json"
+    },
 	"opt": {
 		"lr": 1e-3
 	},

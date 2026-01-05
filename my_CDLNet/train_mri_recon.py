@@ -41,12 +41,15 @@ def fit(net, opt, loaders,
         start_epoch = 1,
         clip_grad = 1,
         noise_std = 25,
+        image_noise_std = 0,
         demosaic = False, 
         verbose = True, 
         val_freq = 1,
         save_freq = 1,
         epoch_fun = None, 
         mcsure = False,
+        x_init = False,
+        denoiser_args_path=None,
         R = 8, # MRI args
         acs_lines = 24,
         backtrack_thresh = 1):
@@ -64,6 +67,13 @@ def fit(net, opt, loaders,
     top_psnr = {"train": 0, "val": 0, "test": 0} # for backtracking
     epoch = start_epoch
     
+    if x_init:
+        # if we are using a denoiser starting point, then we must load it in:
+        dnsr_args_file = open(denoiser_args_path)
+        dnsr_args = json.load(dnsr_args_file)
+        dnsr_args_file.close()
+        dnsr, _, _, _ = init_model(dnsr_args, device=device)
+
     # start at the correct epoch, iterate up until number of epochs prescribed
     while epoch < start_epoch + epochs:
         # separate based on training phase
@@ -103,7 +113,16 @@ def fit(net, opt, loaders,
 
                 with torch.set_grad_enabled(phase == 'train'):
                     # Make predictions per batch
-                    img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, mri = True)
+                    if x_init:
+                        # If we want to initialize our model with some x_t, then we have to generate noisy image domain observation
+                        x_t_noisy, sig_t = awgn(image, image_noise_std)
+                        # We want to add some powerful noise to x_t, then denoise it and send it in as x_init
+                        # We need some denoiser args
+                        x_t, _ = dnsr(x_t_noisy, sig_t)
+                        breakpoint()
+                        img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True)
+                    else:
+                        img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, mri = True)
                     # supervised or unsupervised (MCSURE) loss during training
                     '''
                     if mcsure and phase == "train":
