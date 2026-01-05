@@ -291,7 +291,7 @@ class ImMAP(nn.Module):
                 # draw random noise
                 noise = torch.randn_like(x_t)
                 # Instead of performing a proximal update, use our e2e_net
-                x_p = e2e_net(y, noise_level, x_init = x_hat_t, mri = True)
+                x_p = e2e_net(y, noise_level, x_init = x_t, mri = True)
                 x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                 # Then, proceed with just regular immap
                 while sigma_t > self.sigma_L:
