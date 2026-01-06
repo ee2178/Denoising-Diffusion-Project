@@ -290,7 +290,7 @@ class ImMAP(nn.Module):
                 # draw random noise
                 noise = torch.randn_like(x_t)
                 # Instead of performing a proximal update, use our e2e_net
-                x_p = e2e_net(y, noise_level, x_init = x_t, mri = True)
+                x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
                 x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                 # Then, proceed with just regular immap
                 while sigma_t > self.sigma_L:
@@ -298,15 +298,19 @@ class ImMAP(nn.Module):
                     # Get noise level estimate
                     sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
                     sigma_t = torch.sqrt(sigma_t_sq)
+                    # Compute proximal weighting
+                    p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
                     # Update noise injection
                     gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
                     # draw random noise
                     noise = torch.randn_like(x_t)
-                    # Instead of performing a proximal update, use our e2e_net
-                    x_p = e2e_net(x_t, sigma_t, x_init = x_hat_t, mri = True)
-                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    def A(x, E = E, EH = EH):
+                        return EH(E(x)) + p_t*x
+
+                    prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                    x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -384,7 +388,7 @@ def main():
     # Mask kspace
     kspace_masked = mask * kspace
     # Get noise level 
-    noise_level = 0.0
+    noise_level = 0.05
     
     gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
 
@@ -412,7 +416,7 @@ def main():
 
     immap = ImMAP(net)
     # test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
     breakpoint()
 
 if __name__ == "__main__":
