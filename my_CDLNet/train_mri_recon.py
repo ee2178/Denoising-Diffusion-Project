@@ -119,7 +119,6 @@ def fit(net, opt, loaders,
                         # We want to add some powerful noise to x_t, then denoise it and send it in as x_init
                         # We need some denoiser args
                         x_t, _ = dnsr(x_t_noisy, sig_t)
-                        breakpoint()
                         img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True)
                     else:
                         img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, mri = True)

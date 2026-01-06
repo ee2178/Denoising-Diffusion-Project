@@ -305,7 +305,7 @@ class LPDSNet(nn.Module):
             x = x_prev - self.eta[k]*(EH(E(x_prev))-yp+self.B[k](z))
             xp = x + self.theta[k]*(x-x_prev)
             z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
-            xprev = x
+            x_prev = x
     
         x_hat = post_process(x, params)
         return x_hat, z

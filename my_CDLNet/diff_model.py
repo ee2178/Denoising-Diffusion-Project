@@ -265,7 +265,6 @@ class ImMAP(nn.Module):
                     # draw random noise
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
-                    breakpoint()
                     x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
                     x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
@@ -317,6 +316,7 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
+        return x_t
     def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0, 50), zeta = 0.5):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
@@ -411,8 +411,8 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward_quant(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    # test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":
