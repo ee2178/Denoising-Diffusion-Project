@@ -347,7 +347,7 @@ class ImMAP(nn.Module):
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t]
-                x_hat_t, _ = self.denoiser(x_t, sigma_t)
+                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                 p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 gamma_t = sigma_t*h_t*((1-self.beta))**0.5
