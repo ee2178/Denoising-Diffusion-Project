@@ -278,7 +278,7 @@ class ImMAP(nn.Module):
                     # draw random noise
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
-                    x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
+                    x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
                     x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
@@ -430,8 +430,8 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    # test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":
