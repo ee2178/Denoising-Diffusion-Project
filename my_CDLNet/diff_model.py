@@ -298,9 +298,9 @@ class ImMAP(nn.Module):
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                for t in range(50):
+                for t in range(40):
                     sigma_t = sig_t_vec[t]
-                    if t < 40:
+                    if t <= 40:
                         # update step size
                         h_t = self.h_0 * t/(1+self.h_0*(t-1))
                         # Update noise injection
@@ -310,21 +310,29 @@ class ImMAP(nn.Module):
                         # Instead of performing a proximal update, use our e2e_net
                         x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
                         x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
-                    else:
-                        x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                        # Compute proximal weighting
-                        p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
-                        # update step size
-                        h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                        # Update noise injection
-                        gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                        # draw random noise
-                        noise = torch.randn_like(x_t)
-                        def A(x, E = E, EH = EH):
-                            return EH(E(x)) + p_t*x
+                        
+                        if t % 5 == 0 and save_dir:
+                            fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                            saveimg(x_t, fname)
+                        if verbose == True:
+                            print(f"Iteration {t} complete. Noise level: {sigma_t}.")
+                            t = t + 1
+                while sigma_t > self.sigma_L:
+                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                    sigma_t = torch.mean((x_hat_t - x_t).abs()**2)**0.5
+                    # Compute proximal weighting
+                    p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
+                    # update step size
+                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                    # Update noise injection
+                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                    # draw random noise
+                    noise = torch.randn_like(x_t)
+                    def A(x, E = E, EH = EH):
+                        return EH(E(x)) + p_t*x
 
-                        prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
-                        x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                    prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                    x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
