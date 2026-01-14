@@ -32,7 +32,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 2.,        # Parameter for immap2
+                        lam = 1.,        # Parameter for immap2
                         zeta = 0.5
                         ):
         super(ImMAP, self).__init__()
