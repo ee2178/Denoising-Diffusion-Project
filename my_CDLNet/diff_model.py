@@ -344,6 +344,7 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         EHy = EH(y)
         sigma_t = 1
+        self.beta = 0.5
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t]
