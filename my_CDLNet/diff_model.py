@@ -264,7 +264,7 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
         # Let us fix a noise schedule
-        sig_t_vec = torch.linspace(1, 0, 50)
+        sig_t_vec = torch.linspace(1., 0.001, 50)
 
         EHy = EH(y)
         if mode == 1:
@@ -298,43 +298,38 @@ class ImMAP(nn.Module):
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                # Get noise level estimate
-                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                sigma_t = torch.sqrt(sigma_t_sq)
-                # update step size
-                h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                # Update noise injection
-                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                # draw random noise
-                noise = torch.randn_like(x_t)
-                # Instead of performing a proximal update, use our e2e_net
-                x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
-                x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
-                # Then, proceed with just regular immap
-                while sigma_t > self.sigma_L:
-                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                    # Get noise level estimate
-                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                    sigma_t = torch.sqrt(sigma_t_sq)
-                    # Compute proximal weighting
-                    p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
-                    # update step size
-                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                    # Update noise injection
-                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                    # draw random noise
-                    noise = torch.randn_like(x_t)
-                    def A(x, E = E, EH = EH):
-                        return EH(E(x)) + p_t*x
+                for t in range(50):
+                    sigma_t = sig_t_vec[t]
+                    if t < 40:
+                        # update step size
+                        h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                        # Update noise injection
+                        gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                        # draw random noise
+                        noise = torch.randn_like(x_t)
+                        # Instead of performing a proximal update, use our e2e_net
+                        x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                        x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    else:
+                        x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                        # Compute proximal weighting
+                        p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
+                        # update step size
+                        h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                        # Update noise injection
+                        gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                        # draw random noise
+                        noise = torch.randn_like(x_t)
+                        def A(x, E = E, EH = EH):
+                            return EH(E(x)) + p_t*x
 
-                    prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
-                    x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                        prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                        x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
                     if verbose == True:
-                        print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
                     t = t + 1
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
@@ -437,7 +432,7 @@ def main():
 
     immap = ImMAP(net)
     # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
     breakpoint()
 
 if __name__ == "__main__":
