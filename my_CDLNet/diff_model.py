@@ -164,11 +164,14 @@ class ImMAP(nn.Module):
                 prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
                 '''
                 # Perform update
+                x_t = x_t +h_t*(v_t-x_t) + gamma_t*noise
                 # Let us modify the update -  we assume x_t \approx v_t + sigma_t * noise. So, let's fold that second term into the noise injection
+                '''
                 if t+1 < 50:
                     x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise + (sig_t_vec[t+1]+0.005)*torch.randn_like(noise)
                 elif t+1 >= 50:
                     x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise
+                '''
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
