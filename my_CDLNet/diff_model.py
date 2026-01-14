@@ -32,7 +32,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 8.        # Parameter for immap2
+                        lam = 0.1        # Parameter for immap2
                         ):
         super(ImMAP, self).__init__()
         self.denoiser = denoiser
@@ -151,14 +151,18 @@ class ImMAP(nn.Module):
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
-                prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
                 
                 '''
                 # Use derived result for prox of l2 norm - this doesn't work!!!!!
                 prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
                 '''
                 # Perform update
-                x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                # x_t = x_t + h_t * (v_t-x_t) + gamma_t*noise
+                # breakpoint()
+                # Let us modify the update -  we assume x_t \approx v_t + sigma_t * noise. So, let's fold that second term into the noise injection
+                x_t = v_t + 0.5**0.5 * h_t * (v_t - x_t) + 0.5**0.5 * (gamma_t+sigma_t-sigma_y)*noise 
+
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
@@ -415,8 +419,8 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
+    # test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
     breakpoint()
 
 if __name__ == "__main__":
