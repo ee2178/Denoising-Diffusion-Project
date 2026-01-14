@@ -124,13 +124,17 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         EHy = EH(y)
 
+        # Fix a noise schedule
+        sig_t_vec = torch.linspace(1.0, 0.001, 50)
+
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                 # Get noise level estimate
-                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                sigma_t = torch.sqrt(sigma_t_sq)
-
+                #sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                #sigma_t = torch.sqrt(sigma_t_sq)
+                sigma_t = sig_t_vec[t]
+                sigma_t_sq = sigma_t**2
                 # Compute proximal weighting
                 p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
                
@@ -153,18 +157,18 @@ class ImMAP(nn.Module):
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
-                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 10000, tol=1e-3, verbose = False)
                 
                 '''
                 # Use derived result for prox of l2 norm - this doesn't work!!!!!
                 prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
                 '''
                 # Perform update
-                # x_t = x_t + h_t * (v_t-x_t) + gamma_t*noise
-                # breakpoint()
                 # Let us modify the update -  we assume x_t \approx v_t + sigma_t * noise. So, let's fold that second term into the noise injection
-                x_t = v_t + (self.zeta)**0.5 * h_t * (v_t - x_t) + (1-self.zeta)**0.5 * (gamma_t+sigma_t-sigma_y)*noise 
-
+                if t+1 < 50:
+                    x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise + (sig_t_vec[t+1]+0.005)*torch.randn_like(noise)
+                elif t+1 >= 50:
+                    x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
