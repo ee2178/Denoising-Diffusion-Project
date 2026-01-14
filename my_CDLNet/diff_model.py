@@ -32,7 +32,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 0.1        # Parameter for immap2
+                        lam = 2.        # Parameter for immap2
                         ):
         super(ImMAP, self).__init__()
         self.denoiser = denoiser
@@ -161,7 +161,7 @@ class ImMAP(nn.Module):
                 # x_t = x_t + h_t * (v_t-x_t) + gamma_t*noise
                 # breakpoint()
                 # Let us modify the update -  we assume x_t \approx v_t + sigma_t * noise. So, let's fold that second term into the noise injection
-                x_t = v_t + 0.5**0.5 * h_t * (v_t - x_t) + 0.5**0.5 * (gamma_t+sigma_t-sigma_y)*noise 
+                x_t = x_hat_t + 0.5**0.5 * h_t * (v_t - x_t) + 0.5**0.5 * (gamma_t+sigma_t-sigma_y)*noise 
 
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
