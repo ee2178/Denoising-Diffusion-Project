@@ -350,7 +350,7 @@ class ImMAP(nn.Module):
                 x_hat_t, _ = self.denoiser(x_t, sigma_t)
                 p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                gamma_t = sigma_t*h_t*((1-self.beta))**0.5
                 noise = torch.randn_like(x_t)
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
