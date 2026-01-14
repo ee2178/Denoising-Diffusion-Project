@@ -125,16 +125,16 @@ class ImMAP(nn.Module):
         EHy = EH(y)
 
         # Fix a noise schedule
-        sig_t_vec = torch.linspace(1.0, 0.001, 50)
+        # sig_t_vec = torch.linspace(1.0, 0.001, 50)
 
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                 # Get noise level estimate
-                #sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                #sigma_t = torch.sqrt(sigma_t_sq)
-                sigma_t = sig_t_vec[t]
-                sigma_t_sq = sigma_t**2
+                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                sigma_t = torch.sqrt(sigma_t_sq)
+                #sigma_t = sig_t_vec[t]
+                #sigma_t_sq = sigma_t**2
                 # Compute proximal weighting
                 p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
                
@@ -334,7 +334,7 @@ class ImMAP(nn.Module):
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
         return x_t
-    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0, 50), zeta = 0.5):
+    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0.001, 50)):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
         x_t, t, _, _, y = self.init_diff(y, noise_level)
@@ -343,11 +343,12 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
         EHy = EH(y)
+        sigma_t = 1
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t]
-                x_t, _ = self.denoiser(x_t, sigma_t)
-                p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t**2))
+                x_hat_t, _ = self.denoiser(x_t, sigma_t)
+                p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
                 noise = torch.randn_like(x_t)
@@ -355,7 +356,7 @@ class ImMAP(nn.Module):
                     return EH(E(x)) + p_t*x
                 v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1000, tol=1e-3, verbose = False)
                 
-                x_t = v_t + torch.sqrt(1-zeta) * h_t * (prox_update-x_t) + torch.sqrt(zeta) * gamma_t * noise
+                x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
@@ -428,7 +429,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
+    test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
     # test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
     breakpoint()
 
