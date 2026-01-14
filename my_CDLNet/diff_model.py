@@ -293,7 +293,7 @@ class ImMAP(nn.Module):
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                sig_t_vec = torch.linspace(1., 0.05, 50)
+                sig_t_vec = torch.linspace(1., 0.1, 50)
                 for t in range(50):
                     sigma_t = sig_t_vec[t]
                     # update step size
