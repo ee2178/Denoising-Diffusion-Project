@@ -263,14 +263,21 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
+        t = 0
+        # Let us fix a noise schedule
+        sig_t_vec = torch.linspace(1, 0, 50)
+
         EHy = EH(y)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
-                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                    # x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                     # Get noise level estimate
-                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                    sigma_t = torch.sqrt(sigma_t_sq)
+                    # sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
+                    # sigma_t = torch.sqrt(sigma_t_sq)
+                    
+
+                    sigma_t = sig_t_vec[t]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
                     # Update noise injection
