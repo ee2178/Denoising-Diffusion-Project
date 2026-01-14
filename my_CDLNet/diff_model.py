@@ -270,12 +270,6 @@ class ImMAP(nn.Module):
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
-                    # x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                    # Get noise level estimate
-                    # sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                    # sigma_t = torch.sqrt(sigma_t_sq)
-                    
-
                     sigma_t = sig_t_vec[t-1]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
@@ -295,6 +289,7 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
+                    
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
@@ -440,7 +435,7 @@ def main():
 
     immap = ImMAP(net)
     # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":
