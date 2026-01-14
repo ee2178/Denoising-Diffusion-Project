@@ -210,6 +210,7 @@ class LPDSNet(nn.Module):
                         E = None, # Measurement operator
                         EH = None,
                         adaptive = False, # noise adaptive threshold
+                        e2e_diff = False, # Indicate whether or not we use this for diffusion, then we need a 2nd noise input
                         init = True): # False -> use power method for weight init
         super(LPDSNet, self).__init__()
 
@@ -224,7 +225,10 @@ class LPDSNet(nn.Module):
 
         # t are the learned thresholds for the elementwise clipping (K (num folds) x 2 (noise adaptive thresh) x M (num channels))
         self.l = nn.Parameter(torch.cat((l0*torch.ones(K, 1, M, 1, 1), torch.zeros(K, 1, M, 1, 1)), dim = 1))
+
         # Set lambda_0 to l0, lambda_1 to 0.
+        if e2e_diff:
+            self.l_2 = nn.Parameter(torch.zeros(K, 1, M, 1, 1))       
 
         # If we have E = None, then self.E is going to be an identity mapping (corresponding to a denoising problem)
         if E:
@@ -274,7 +278,7 @@ class LPDSNet(nn.Module):
         self.eta = nn.Parameter(eta_0 * torch.ones(K, 1))
         self.theta = nn.Parameter(theta_0 * torch.ones(K, 1))
 
-    def forward(self, y, sigma=None, mask = None, smaps = None, mri = False, x_init = None):
+    def forward(self, y, sigma=None, mask = None, smaps = None, mri = False, x_init = None, sigma_t = None):
         # Will need to do this for MRI reconstruction
         # set up encoding/decoding operators
         # Flatten y, smaps
@@ -291,7 +295,9 @@ class LPDSNet(nn.Module):
         # mean subtraction and stride padding 
         yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
-        c = 0 if sigma is None or not self.adaptive else sigma/255.0
+        c1 = 0 if sigma is None or not self.adaptive else sigma/255.0
+        # Diffusion scale factor
+        c2 = 0 if sigma_t is None or not self.adaptive else sigma_t/255.0
 
         # If we do not want to initialize x as anything in particular, set it to 0
         if x_init is None:
@@ -304,7 +310,7 @@ class LPDSNet(nn.Module):
         for k in range(0, self.K):
             x = x_prev - self.eta[k]*(EH(E(x_prev))-yp+self.B[k](z))
             xp = x + self.theta[k]*(x-x_prev)
-            z = CLIP(z + self.A[k](xp), self.l[k, :1] + c*self.l[k, 1:2])
+            z = CLIP(z + self.A[k](xp), self.l[k, :1] + c1*self.l[k, 1:2] + c2*self.l_2[k])
             x_prev = x
     
         x_hat = post_process(x, params)
@@ -317,6 +323,7 @@ class LPDSNet(nn.Module):
 
         """
         self.l.clamp_(0.0)
+        self.l_2.clamp_(0.0)
         self.eta.clamp_(0.0)
         self.theta.clamp_(0.0)
         for k in range(self.K):

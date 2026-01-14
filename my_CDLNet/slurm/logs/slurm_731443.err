@@ -1,0 +1,11 @@
+/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+TRAIN-E1:   0%|          | 0/2678 [00:00<?, ?it/s]TRAIN-E1:   0%|          | 0/2678 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 315, in <module>
+    main(args)    
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 25, in main
+    fit(net, 
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 122, in fit
+    img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True, sigma_t = sig_t)
+NameError: name 'x_t' is not defined

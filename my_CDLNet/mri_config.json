@@ -2,7 +2,8 @@
 "type": "LPDSNet",
 "model": {
 	"adaptive": true,
-	"K": 30,
+    "e2e_diff" : true,
+    "K": 30,
 	"M": 169,
 	"C": 1,
 	"P": 7,
@@ -10,7 +11,7 @@
 },
 "paths": {
 	"save": "trained_nets/e2e_conditioning",
-	"ckpt": "trained_nets/e2e_conditioning/net.ckpt"
+	"ckpt": null
 },
 "train": {
 	"loaders": {
