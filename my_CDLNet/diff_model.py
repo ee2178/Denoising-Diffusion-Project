@@ -16,6 +16,7 @@ from pprint import pprint
 from functools import partial
 from utils import saveimg
 from model_utils import uball_project
+from metrics import psnr, ssim
 
 '''import argparse
 parser = argparse.ArgumentParser()
@@ -32,7 +33,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 2.,        # Parameter for immap2
+                        lam = 1.,        # Parameter for immap2
                         zeta = 0.5
                         ):
         super(ImMAP, self).__init__()
@@ -297,7 +298,7 @@ class ImMAP(nn.Module):
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                while sigma_t > 0.03:
+                while sigma_t > 0.1:
                     sigma_t = sig_t_vec[t-1]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))

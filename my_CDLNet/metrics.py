@@ -9,7 +9,6 @@ import os
 import h5py
 
 from pprint import pprint
-from diff_model import ImMAP
 from mri_utils import make_acc_mask
 
 
