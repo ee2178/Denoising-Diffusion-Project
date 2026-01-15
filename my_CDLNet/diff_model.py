@@ -381,7 +381,7 @@ def main():
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    slice = 5
+    slice = 8
 
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     fname = os.path.basename(kspace_fname)
