@@ -16,6 +16,7 @@ from pprint import pprint
 from functools import partial
 from utils import saveimg
 from model_utils import uball_project
+from metrics import psnr, ssim
 
 '''import argparse
 parser = argparse.ArgumentParser()
@@ -32,7 +33,8 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 8.        # Parameter for immap2
+                        lam = 1.,        # Parameter for immap2
+                        zeta = 0.5
                         ):
         super(ImMAP, self).__init__()
         self.denoiser = denoiser
@@ -40,6 +42,7 @@ class ImMAP(nn.Module):
         self.sigma_L = sigma_L
         self.h_0 = h_0
         self.lam = lam
+        self.zeta = zeta
     
     def init_diff(self, y, noise_level):
         # Get a random image 
@@ -122,13 +125,17 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         EHy = EH(y)
 
+        # Fix a noise schedule
+        # sig_t_vec = torch.linspace(1.0, 0.001, 50)
+
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                 # Get noise level estimate
                 sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
                 sigma_t = torch.sqrt(sigma_t_sq)
-
+                #sigma_t = sig_t_vec[t]
+                #sigma_t_sq = sigma_t**2
                 # Compute proximal weighting
                 p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
                
@@ -151,14 +158,21 @@ class ImMAP(nn.Module):
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 
-                prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
+                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 10000, tol=1e-3, verbose = False)
                 
                 '''
                 # Use derived result for prox of l2 norm - this doesn't work!!!!!
                 prox_update = torch.maximum(torch.zeros_like(x_hat_t).real, 1-1/(p_t*x_hat_t.abs()))*x_hat_t
                 '''
                 # Perform update
-                x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                x_t = x_t +h_t*(v_t-x_t) + gamma_t*noise
+                # Let us modify the update -  we assume x_t \approx v_t + sigma_t * noise. So, let's fold that second term into the noise injection
+                '''
+                if t+1 < 50:
+                    x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise + (sig_t_vec[t+1]+0.005)*torch.randn_like(noise)
+                elif t+1 >= 50:
+                    x_t = v_t + h_t * (v_t - x_t) + (gamma_t)*noise
+                '''
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
@@ -250,14 +264,18 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
+        # Let us fix a noise schedule
+        # Precompute the noise schedule first
+        sig_t_vec = [1]
+        i=1
+        while sig_t_vec[-1] > 0.01:
+            sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
+            i=i+1
         EHy = EH(y)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
-                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                    # Get noise level estimate
-                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                    sigma_t = torch.sqrt(sigma_t_sq)
+                    sigma_t = sig_t_vec[t-1]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
                     # Update noise injection
@@ -265,7 +283,7 @@ class ImMAP(nn.Module):
                     # draw random noise
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
-                    x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
+                    x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
                     x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
@@ -276,30 +294,33 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
+                    
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                # Get noise level estimate
-                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                sigma_t = torch.sqrt(sigma_t_sq)
-                # update step size
-                h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                # Update noise injection
-                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                # draw random noise
-                noise = torch.randn_like(x_t)
-                # Instead of performing a proximal update, use our e2e_net
-                x_p, _ = e2e_net(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_hat_t, mri = True)
-                x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
-                # Then, proceed with just regular immap
+                while sigma_t > 0.1:
+                    sigma_t = sig_t_vec[t-1]
+                    # update step size
+                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                    # Update noise injection
+                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                    # draw random noise
+                    noise = torch.randn_like(x_t)
+                    # Instead of performing a proximal update, use our e2e_net
+                    x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                        
+                    if t % 5 == 0 and save_dir:
+                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                        saveimg(x_t, fname)
+                    if verbose == True:
+                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
+                        t = t + 1
                 while sigma_t > self.sigma_L:
                     x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                    # Get noise level estimate
-                    sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                    sigma_t = torch.sqrt(sigma_t_sq)
+                    sigma_t = torch.mean((x_hat_t - x_t).abs()**2)**0.5
                     # Compute proximal weighting
-                    p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t_sq))
+                    p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
                     # Update noise injection
@@ -315,13 +336,13 @@ class ImMAP(nn.Module):
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
                     if verbose == True:
-                        print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
                     t = t + 1
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
         return x_t
-    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0, 50), zeta = 0.5):
+    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0.001, 50)):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
         x_t, t, _, _, y = self.init_diff(y, noise_level)
@@ -330,19 +351,21 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
         EHy = EH(y)
+        sigma_t = 1
+        self.beta = 0.5
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t]
-                x_t, _ = self.denoiser(x_t, sigma_t)
-                p_t = self.lam*sigma_y**2 / (sigma_t_sq/(1+sigma_t**2))
+                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                gamma_t = sigma_t*h_t*((1-self.beta))**0.5
                 noise = torch.randn_like(x_t)
                 def A(x, E = E, EH = EH):
                     return EH(E(x)) + p_t*x
                 v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1000, tol=1e-3, verbose = False)
                 
-                x_t = v_t + torch.sqrt(1-zeta) * h_t * (prox_update-x_t) + torch.sqrt(zeta) * gamma_t * noise
+                x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
@@ -359,7 +382,7 @@ def main():
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    slice = 3
+    slice = 8
 
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     fname = os.path.basename(kspace_fname)
@@ -415,7 +438,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward_2(kspace_masked, noise_level, mask, smaps, save_dir)
+    # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
     test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
     breakpoint()
 

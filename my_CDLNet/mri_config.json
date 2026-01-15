@@ -11,7 +11,7 @@
 },
 "paths": {
 	"save": "trained_nets/e2e_conditioning",
-	"ckpt": null
+	"ckpt": "trained_nets/e2e_conditioning/net.ckpt"
 },
 "train": {
 	"loaders": {
