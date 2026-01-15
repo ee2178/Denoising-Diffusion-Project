@@ -267,6 +267,7 @@ class ImMAP(nn.Module):
         # Precompute the noise schedule first
         sig_t_vec = [1]
         i=1
+        self.h_0=0.05
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
@@ -298,7 +299,7 @@ class ImMAP(nn.Module):
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
                 while sigma_t > 0.05:
-                    sigma_t = sig_t_vec[t]
+                    sigma_t = sig_t_vec[t-1]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
                     # Update noise injection
@@ -438,7 +439,7 @@ def main():
 
     immap = ImMAP(net)
     # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":
