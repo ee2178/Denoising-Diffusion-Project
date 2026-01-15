@@ -270,7 +270,6 @@ class ImMAP(nn.Module):
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
-        breakpoint()
         EHy = EH(y)
         if mode == 1:
             with torch.no_grad():
@@ -382,7 +381,7 @@ def main():
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    slice = 3
+    slice = 5
 
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     fname = os.path.basename(kspace_fname)
