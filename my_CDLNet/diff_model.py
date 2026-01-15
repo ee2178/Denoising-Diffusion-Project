@@ -264,8 +264,13 @@ class ImMAP(nn.Module):
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
         # Let us fix a noise schedule
-        sig_t_vec = torch.linspace(1., 0.001, 50)
-
+        # Precompute the noise schedule first
+        sig_t_vec = [1]
+        i=1
+        while sig_t_vec[-1] > 0.01:
+            sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
+            i=i+1
+        breakpoint()
         EHy = EH(y)
         if mode == 1:
             with torch.no_grad():
@@ -435,7 +440,7 @@ def main():
 
     immap = ImMAP(net)
     # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=1)
     breakpoint()
 
 if __name__ == "__main__":
