@@ -33,7 +33,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 1.,        # Parameter for immap2
+                        lam = 4.,        # Parameter for immap2
                         zeta = 0.5
                         ):
         super(ImMAP, self).__init__()
@@ -273,6 +273,7 @@ class ImMAP(nn.Module):
             i=i+1
         EHy = EH(y)
         if mode == 1:
+            sig_t_vec = torch.linspace(1, 0.01, 100)
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
                     sigma_t = sig_t_vec[t-1]
@@ -283,8 +284,10 @@ class ImMAP(nn.Module):
                     # draw random noise
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
-                    x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
-                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                    # x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    # Replace with ImMAP3 update eqn
+                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -298,7 +301,7 @@ class ImMAP(nn.Module):
         if mode == 2:
             # This version only does the e2e conditioning for a single step at the start
             with torch.no_grad():
-                while sigma_t > 0.1:
+                while sigma_t > 0.05:
                     sigma_t = sig_t_vec[t-1]
                     # update step size
                     h_t = self.h_0 * t/(1+self.h_0*(t-1))
@@ -307,9 +310,9 @@ class ImMAP(nn.Module):
                     # draw random noise
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
-                    x_p, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
-                    x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
-                        
+                    v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                    # x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise    
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -330,8 +333,9 @@ class ImMAP(nn.Module):
                     def A(x, E = E, EH = EH):
                         return EH(E(x)) + p_t*x
 
-                    prox_update, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 100, tol=1e-3, verbose = False)
-                    x_t = x_t + h_t * (prox_update-x_t) + gamma_t*noise
+                    v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 10000, tol=1e-3, verbose = False)
+                    # x_t = x_t + h_t * (v_t-x_t) + gamma_t*noise
+                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -341,7 +345,7 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
-        return x_t
+        return x_t, v_t
     def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0.001, 50)):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
@@ -438,8 +442,12 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward_3(kspace_masked, noise_level, mask, smaps, save_dir)
-    test = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = save_dir, verbose = True, mode=2)
+    # test = immap.forward(kspace_masked, noise_level, mask, smaps, save_dir)
+    test, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    psnr_ = psnr(gnd_truth, test)
+    ssim_ = ssim(gnd_truth[None, None], test)
+    print(f"PSNR:{psnr_}")
+    print(f"SSIM:{ssim_}")
     breakpoint()
 
 if __name__ == "__main__":

@@ -10,8 +10,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/e2e_conditioning",
-	"ckpt": "trained_nets/e2e_conditioning/net.ckpt"
+	"save": "trained_nets/LPDS_mixedimmap",
+	"ckpt": "trained_nets/LPDS_mixedimmap/net.ckpt"
 },
 "train": {
 	"loaders": {
