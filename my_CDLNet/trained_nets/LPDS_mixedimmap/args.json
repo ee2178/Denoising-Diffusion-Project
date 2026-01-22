@@ -5,6 +5,7 @@
         "M": 169,
         "P": 7,
         "adaptive": true,
+        "e2e_diff": true,
         "s": 2
     },
     "mri": {
@@ -12,8 +13,8 @@
         "acs_lines": 24
     },
     "paths": {
-        "ckpt": "trained_nets/e2e_conditioning/net.ckpt",
-        "save": "trained_nets/e2e_conditioning"
+        "ckpt": "trained_nets/LPDS_mixedimmap/net.ckpt",
+        "save": "trained_nets/LPDS_mixedimmap"
     },
     "train": {
         "fit": {

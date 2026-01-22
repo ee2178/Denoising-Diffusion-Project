@@ -33,7 +33,7 @@ class ImMAP(nn.Module):
                         beta = 0.05,    # Noise injection ratio, should belong in [0, 1]
                         sigma_L = 0.01, # Noise level cutoff
                         h_0 = 0.01,      # Initial step size
-                        lam = 4.,        # Parameter for immap2
+                        lam = 2.,        # Parameter for immap2
                         zeta = 0.5
                         ):
         super(ImMAP, self).__init__()
@@ -58,7 +58,7 @@ class ImMAP(nn.Module):
 
         return x_t, t, sigma_t, sigma_t_prev, noisy_y
 
-    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = False): # Provide a y to condition on
+    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True): # Provide a y to condition on
         # Set initial conditions
         x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
 
@@ -266,14 +266,14 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
-        sig_t_vec = [1]
+        '''sig_t_vec = [1]
         i=1
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
-            i=i+1
+            i=i+1'''
         EHy = EH(y)
+        sig_t_vec = torch.linspace(1, 0.01, 100)
         if mode == 1:
-            sig_t_vec = torch.linspace(1, 0.01, 100)
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
                     sigma_t = sig_t_vec[t-1]
@@ -346,7 +346,7 @@ class ImMAP(nn.Module):
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
         return x_t, v_t
-    def forward_3(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, sig_t_sched = torch.linspace(1, 0.001, 50)):
+    def forward_3(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
         x_t, t, _, _, y = self.init_diff(y, noise_level)
@@ -354,12 +354,17 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
+        sig_t_sched = [1]
+        i=1
+        while sig_t_sched[-1] > 0.01:
+            sig_t_sched.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_sched[i-1])
+            i=i+1
         EHy = EH(y)
         sigma_t = 1
         self.beta = 0.5
         with torch.no_grad():
             while sigma_t > self.sigma_L:
-                sigma_t = sig_t_sched[t]
+                sigma_t = sig_t_sched[t-1]
                 x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
                 p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
@@ -386,7 +391,7 @@ def main():
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    slice = 8
+    slice = 5
 
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     fname = os.path.basename(kspace_fname)
@@ -442,7 +447,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward(kspace_masked, noise_level, mask, smaps, save_dir)
+    # test = immap.forward(kspace_masked, noise_level, mask, smaps, None)
     test, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     psnr_ = psnr(gnd_truth, test)
     ssim_ = ssim(gnd_truth[None, None], test)
