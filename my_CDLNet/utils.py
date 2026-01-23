@@ -37,10 +37,18 @@ def awgn(input, noise_std):
 		       (noise_std[1] - noise_std[0])*torch.rand(len(input),1,1,1, device=input.device)
 	return input + torch.randn_like(input) * (sigma/255), sigma
 
-def saveimg(x, name):
+def contrast_enhance(mag_array, thres = 1.):
+    # assume input is real valued
+    # We are mainly going to use this to enhance the contrast of MR images
+    # Clip values with magnitude greater than thresh
+    return torch.clamp(mag_array, max = thresh)
+
+def saveimg(x, name, contrast=False):
     # Helper function to images
     # get abs value
     x = torch.squeeze(x.abs()).detach().cpu()
+    if contrast_enhance == True:
+        x = contrast_enhance(x)
     plt.imshow(x, cmap = 'gray')
     plt.axis('off')
-    plt.savefig(name)
+    plt.savefig(name, bbox_inches='tight')

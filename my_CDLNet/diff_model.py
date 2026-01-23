@@ -447,8 +447,8 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # test = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
-    test, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    test = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
+    # test, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     psnr_ = psnr(gnd_truth, test)
     ssim_ = ssim(gnd_truth[None, None], test)
     print(f"PSNR:{psnr_}")
