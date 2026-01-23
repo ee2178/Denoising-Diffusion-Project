@@ -51,4 +51,4 @@ def saveimg(x, name, contrast=False):
         x = contrast_enhance(x)
     plt.imshow(x, cmap = 'gray')
     plt.axis('off')
-    plt.savefig(name, bbox_inches='tight')
+    plt.savefig(name, bbox_inches='tight', pad_inches = 0)
