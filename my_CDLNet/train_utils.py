@@ -1,6 +1,7 @@
 import torch
 from PIL import Image
 from torchvision.transforms.functional import to_tensor
+import math
 from math import log
 
 def img_load(path, gray=False):
@@ -31,7 +32,17 @@ def awgn(input, noise_std, dist = 'uniform'):
         eps = 1e-8
         sigma = torch.exp((log(noise_std[0]+eps) + \
             (log(noise_std[1]) - log(noise_std[0]+eps))*torch.rand(len(input),1,1,1, device=input.device)))
+    elif isinstance(noise_std, (list, tuple)) and dist == 'cosine':
+        # Y = arcsin(X), X ~ U([0, 1])
+        # Ignore noise type all together, hard code for now
+        # Draw uniform number [0, 1]
+        x = torch.rand(len(input),1,1,1, device=input.device)
         
-    return input + torch.randn_like(input) * (sigma/255), sigma
+        # Take arccos
+        y = torch.asin(x)
+
+        # Scale to [0, 1]
+        sigma = (y)/(math.pi/2)*255.
+    return input + torch.randn_like(input) * (sigma/255.), sigma
 
 
