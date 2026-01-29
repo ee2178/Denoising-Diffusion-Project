@@ -453,7 +453,7 @@ def main():
     # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
-    espirit_smaps = espirit(mask*volume_kspace[0:8], acs_size=(16, 16))
+    espirit_smaps = torch.flip(espirit(mask*volume_kspace[0:10], acs_size=(16, 16)), dims = (0, 1))
     brain_mask = torch.norm(espirit_smaps[0], dim = 0) != 0
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     
