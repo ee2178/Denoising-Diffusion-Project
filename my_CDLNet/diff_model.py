@@ -9,7 +9,7 @@ import train
 import os
 import gc
 
-from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor
+from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor, espirit
 from functorch import jacrev, jacfwd
 from solvers import conj_grad
 from pprint import pprint
@@ -266,13 +266,13 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
-        '''sig_t_vec = [1]
+        sig_t_vec = [1]
         i=1
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
-            i=i+1'''
+            i=i+1
         EHy = EH(y)
-        sig_t_vec = torch.linspace(1, 0.01, 100)
+        # sig_t_vec = torch.linspace(1, 0.01, 100)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
@@ -406,6 +406,7 @@ def main():
 
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
+        volume_kspace = f['kspace'][()]
     kspace = torch.from_numpy(kspace)
     # breakpoint()
     smaps = torch.from_numpy(smaps)
@@ -423,7 +424,9 @@ def main():
     noise_level = 0.05
     
     gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
-
+    
+    volume_kspace = torch.from_numpy(volume_kspace)
+    volume_kspace = volume_kspace.to(device)
     # Load CDLNet denoiser
     model_args_file = open("eval_config.json")
     model_args = json.load(model_args_file)
@@ -447,12 +450,27 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
+    # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
-    psnr_ = psnr(gnd_truth, immap2_5_out)
-    ssim_ = ssim(gnd_truth[None, None], immap2_5_out)
-    print(f"PSNR:{psnr_}")
-    print(f"SSIM:{ssim_}")
+    # Generate brain mask 
+    espirit_smaps = espirit(mask*volume_kspace[0:8], acs_size=(16, 16))
+    brain_mask = torch.norm(espirit_smaps[0], dim = 0) != 0
+    psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
+    
+    # For ssim, try just zeroing out all the nonmasked pixels?
+    # Grab furthest ends of each mask and turn into a square i guess
+    nnzs = torch.nonzero(mask)
+    # Grab max and min across each dimension
+    max_x = torch.max(nnzs[:, 0])
+    min_x = torch.min(nnzs[:, 0])
+
+    max_y = torch.max(nnzs[:, 1])
+    min_y = torch.min(nnzs[:, 1])
+    
+    ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
+    print(f"ImMAP2.5 PSNR:{psnr_}")
+    print(f"ImMAP2.5 SSIM:{ssim_}")
+    
     breakpoint()
 
 if __name__ == "__main__":

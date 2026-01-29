@@ -365,7 +365,7 @@ def espirit(
 
     for p0 in range(0, P, block_size):
         p1 = min(p0 + block_size, P)
-        Vblk = Vk[:, p0:p]
+        Vblk = Vk[:, p0:p1]
 
         Qblk = Q[:, p0:p1]
 
