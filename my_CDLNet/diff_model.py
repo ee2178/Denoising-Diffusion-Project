@@ -266,13 +266,16 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
+        '''
         sig_t_vec = [1]
         i=1
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
+        '''
         EHy = EH(y)
-        # sig_t_vec = torch.linspace(1, 0.01, 100)
+        
+        sig_t_vec = torch.linspace(1, 0.01, 100)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
@@ -453,7 +456,7 @@ def main():
     # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
-    espirit_smaps = torch.flip(espirit(mask*volume_kspace[0:10], acs_size=(16, 16)), dims = (0, 1))
+    espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(16, 16)), dims = (-2, -1))
     brain_mask = torch.norm(espirit_smaps[0], dim = 0) != 0
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     
