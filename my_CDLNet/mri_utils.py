@@ -2,6 +2,7 @@ import torch
 import torch.fft as fft
 import torch.nn.functional as F
 import math
+from typing import Tuple
 
 # Let us write a helper function to give us a DFT matrix for some N
 def dft_matrix(N):
@@ -256,3 +257,131 @@ def quant_complex(x, n_bits, mag_quant = False, clipping_factor = 1.0):
         x_phase_quant = quant_tensor(x_phase, n_bits, clipping_factor)
 
         return x_mag * torch.exp(1j * x_phase_quant)
+
+def espirit(
+    kspace: torch.Tensor,  # (B, C, Nx, Ny)
+    acs_size: Tuple[int, int] = (32, 32),
+    kernel_size: int = 8,
+    thresh_rowspace: float = 0.05,
+    thresh_eig: float = 0.95,
+    rtol: float = 1e-3,
+    maxit: int = 100,
+    block_size: int = 8192,
+):
+    """
+    Single-map ESPIRiT (power method), Julia-faithful translation.
+    """
+
+    B, C, Nx, Ny = kspace.shape
+    ks = kernel_size
+    device, dtype = kspace.device, kspace.dtype
+
+    # ---------------------------------------------------------
+    # 1. ACS extraction
+    # ---------------------------------------------------------
+    ax, ay = acs_size
+    cx, cy = Nx // 2, Ny // 2
+    kspace_acs = kspace[
+        :, :, cx - ax // 2 : cx + ax // 2, cy - ay // 2 : cy + ay // 2
+    ]
+
+    # ---------------------------------------------------------
+    # 2. Hankel matrix
+    # ---------------------------------------------------------
+    patches = (
+        kspace_acs.permute(0, 2, 3, 1)
+        .unfold(1, ks, 1)
+        .unfold(2, ks, 1)
+        .reshape(B, -1, ks * ks * C)
+    )
+
+    # ---------------------------------------------------------
+    # 3. SVD (small)
+    # ---------------------------------------------------------
+    _, S, Vh = torch.linalg.svd(patches, full_matrices=False)
+    V = Vh.conj().transpose(-2, -1)
+
+    # ---------------------------------------------------------
+    # 4. Row-space truncation
+    # ---------------------------------------------------------
+    Nbasis = max(
+        (S[b] >= thresh_rowspace * S[b, 0]).sum().item() or 1
+        for b in range(B)
+    )
+    V = V[:, :, :Nbasis]
+
+    # ---------------------------------------------------------
+    # 5. Kernels → image domain
+    # ---------------------------------------------------------
+    Vkernel = (
+        V.permute(0, 2, 1)
+        .reshape(B, Nbasis, C, ks, ks)
+        .permute(0, 2, 1, 3, 4)
+    )
+
+    pad_x = (Nx - ks) // 2
+    pad_y = (Ny - ks) // 2
+
+    Vk = torch.fft.ifft2(
+        F.pad(Vkernel, (pad_y, pad_y, pad_x, pad_x)),
+        dim=(-2, -1),
+    )
+    Vk = torch.fft.fftshift(Vk, dim=(-2, -1)) * (Nx * Ny)
+
+    # Vk: (B, C, K, Nx, Ny)
+    Vk = Vk.reshape(B, C, Nbasis, -1).permute(0, 3, 1, 2)
+    # (B, P, C, K)
+
+    P = Vk.shape[1]
+
+    # ---------------------------------------------------------
+    # 6. Power method (implicit Veff)
+    # ---------------------------------------------------------
+    Q = torch.randn(B, P, C, device=device, dtype=dtype)
+    Q = Q / (Q.norm(dim=-1, keepdim=True) + 1e-12)
+
+    for _ in range(maxit):
+        Q_new = torch.zeros_like(Q)
+
+        for p0 in range(0, P, block_size):
+            p1 = min(p0 + block_size, P)
+
+            Vblk = Vk[:, p0:p1]          # (B, Pb, C, K)
+            Qblk = Q[:, p0:p1]           # (B, Pb, C)
+
+            tmp = torch.einsum("bpck,bpc->bpk", Vblk.conj(), Qblk)
+            Q_new[:, p0:p1] = torch.einsum("bpck,bpk->bpc", Vblk, tmp)
+
+        Q_new = Q_new / (Q_new.norm(dim=-1, keepdim=True) + 1e-12)
+
+        if (Q_new - Q).norm() < rtol:
+            break
+        Q = Q_new
+
+    # ---------------------------------------------------------
+    # 7. Eigenvalue estimate (Julia-faithful scaling)
+    # ---------------------------------------------------------
+    lam = torch.zeros(B, P, device=device)
+
+    for p0 in range(0, P, block_size):
+        p1 = min(p0 + block_size, P)
+        Vblk = Vk[:, p0:p]
+
+        Qblk = Q[:, p0:p1]
+
+        tmp = torch.einsum("bpck,bpc->bpk", Vblk.conj(), Qblk)
+        lam[:, p0:p1] = (tmp.abs() ** 2).sum(dim=-1) / (ks ** 2)
+
+    lam = lam.reshape(B, Nx, Ny)
+    Q = Q.reshape(B, Nx, Ny, C)
+
+    # ---------------------------------------------------------
+    # 8. Threshold & normalize
+    # ---------------------------------------------------------
+    mask = lam > thresh_eig
+    smaps = (mask[..., None] * Q).permute(0, 3, 1, 2).conj()
+
+    # phase normalization by first coil
+    ref = smaps[:, :1]
+    smaps = smaps * (ref / (ref.abs() + 1e-12)).conj()
+    return smaps
