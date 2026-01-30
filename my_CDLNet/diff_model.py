@@ -351,7 +351,7 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
-        return x_t, first_it
+        return x_t, v_t, first_it
     def forward_3(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
@@ -458,7 +458,7 @@ def main():
     immap = ImMAP(net)
     immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
-    immap2_5_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    immap2_5_out, prox_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
     
