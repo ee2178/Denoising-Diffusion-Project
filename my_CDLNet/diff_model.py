@@ -362,6 +362,7 @@ class ImMAP(nn.Module):
         sigma_y = noise_level
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        self.beta=0.5
         # Precompute EHy for calculation
         sig_t_sched = [1]
         i=1
@@ -370,7 +371,6 @@ class ImMAP(nn.Module):
             i=i+1
         EHy = EH(y)
         sigma_t = 1
-        self.beta = 0.5
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t-1]
@@ -393,6 +393,7 @@ class ImMAP(nn.Module):
             if save_dir:
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
+        self.beta=0.05
         return x_t
 
 def main():
@@ -421,7 +422,7 @@ def main():
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 12, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 8, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
@@ -459,7 +460,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
+    immap1_out = immap.forward_3(kspace_masked, noise_level, mask, smaps, None)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
