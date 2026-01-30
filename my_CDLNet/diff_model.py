@@ -453,7 +453,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
+    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
@@ -462,7 +462,7 @@ def main():
     
     # For ssim, try just zeroing out all the nonmasked pixels?
     # Grab furthest ends of each mask and turn into a square i guess
-    nnzs = torch.nonzero(mask)
+    nnzs = torch.nonzero(brain_mask*1)
     # Grab max and min across each dimension
     max_x = torch.max(nnzs[:, 0])
     min_x = torch.min(nnzs[:, 0])
@@ -474,6 +474,8 @@ def main():
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
     
+    psnr_2 = psnr(gnd_truth[brain_mask], immap2_out[0, 0, brain_mask])
+    ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
     breakpoint()
 
 if __name__ == "__main__":
