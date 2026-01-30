@@ -289,6 +289,9 @@ class ImMAP(nn.Module):
                     # Instead of performing a proximal update, use our e2e_net
                     v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
                     # x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
+                    if t == 1:
+                        # grab first iterate
+                        first_it = v_t.clone()
                     # Replace with ImMAP3 update eqn
                     x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                     if t % 5 == 0 and save_dir:
@@ -348,7 +351,7 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
-        return x_t, v_t
+        return x_t, first_it
     def forward_3(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
         # Implments ImMAP 3, basically just DiffPIR
         # Set initial conditions
@@ -476,6 +479,9 @@ def main():
     
     psnr_2 = psnr(gnd_truth[brain_mask], immap2_out[0, 0, brain_mask])
     ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
+    print(f"ImMAP2 PSNR:{psnr_2}")
+    print(f"ImMAP2 SSIM:{ssim_2}")
+
     breakpoint()
 
 if __name__ == "__main__":
