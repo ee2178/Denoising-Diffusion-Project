@@ -266,16 +266,16 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
-        
+        '''
         sig_t_vec = [1]
         i=1
         while sig_t_vec[-1] > 0.01:
             sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
-        
+        '''
         EHy = EH(y)
         
-        # sig_t_vec = torch.linspace(1, 0.001, 100)
+        sig_t_vec = torch.linspace(1, 0.001, 100)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
@@ -421,7 +421,7 @@ def main():
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
     
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 8, acs_lines = 24)
+    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 12, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU

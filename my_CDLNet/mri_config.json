@@ -11,7 +11,7 @@
 },
 "paths": {
 	"save": "trained_nets/LPDS_mixedimmap",
-	"ckpt": "trained_nets/LPDS_mixedimmap/net_logscale.ckpt"
+	"ckpt": "trained_nets/LPDS_mixedimmap/net.ckpt"
 },
 "train": {
 	"loaders": {
