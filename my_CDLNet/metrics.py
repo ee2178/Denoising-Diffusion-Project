@@ -53,8 +53,8 @@ def ssim(x, y, window_size=11):
     Compute SSIM for complex-valued images x and y.
     Shapes: (N, C, H, W), dtype: complex64/complex128
     """
-    C1 = 1e-4
-    C2 = 9e-4
+    C1 = (1e-2)**2
+    C2 = (3e-2)**2
       
     # 1. Convert complex → magnitude
     x_mag = torch.abs(x)

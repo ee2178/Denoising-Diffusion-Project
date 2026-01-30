@@ -275,7 +275,7 @@ class ImMAP(nn.Module):
         '''
         EHy = EH(y)
         
-        sig_t_vec = torch.linspace(1, 0.01, 100)
+        sig_t_vec = torch.linspace(1, 0.001, 100)
         if mode == 1:
             with torch.no_grad():
                 while sigma_t > self.sigma_L:
@@ -452,12 +452,13 @@ def main():
 
     lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
     # Make a noisy kspace measurement
-    noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
+    # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
+    # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
+    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
-    # immap2_5_out, prox = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    immap2_5_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
     
@@ -473,18 +474,23 @@ def main():
 
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
-    '''
+    
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
+
+    psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
+    ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
+    print(f"ImMAP1 PSNR:{psnr_1}")
+    print(f"ImMAP1 SSIM:{ssim_1}")
     '''
 
     psnr_1 = psnr(gnd_truth[brain_mask], e2e_recon[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], e2e_recon[:, :, min_x:max_x, min_y:max_y])
     print(f"LPDSNet Recon PSNR:{psnr_1}")
     print(f"LPDSNet SSIM:{ssim_1}")
-
+    '''
     psnr_2 = psnr(gnd_truth[brain_mask], immap2_out[0, 0, brain_mask])
     ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2 PSNR:{psnr_2}")
