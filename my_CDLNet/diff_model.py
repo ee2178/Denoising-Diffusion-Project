@@ -293,7 +293,7 @@ class ImMAP(nn.Module):
                         # grab first iterate
                         first_it = v_t.clone()
                     # Replace with ImMAP3 update eqn
-                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
+                    x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -351,6 +351,9 @@ class ImMAP(nn.Module):
                 if save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                     saveimg(x_t, fname)
+        sigma_t=0.01
+        v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+
         return x_t, v_t, first_it
     def forward_3(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
         # Implments ImMAP 3, basically just DiffPIR
