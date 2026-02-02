@@ -254,7 +254,7 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         return x_t
 
-    def forward_2_e2econditioned(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, mode=1):
+    def forward_2p5(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, mode=1):
         # This implements a version of immap that conditions on an end to end reconstruction using a separate LPDSNet
         # Makes the approximation that E[x|x_t] = e2e_net(x_hat_t, 0, x_t, sigma_t)
                 
@@ -270,7 +270,7 @@ class ImMAP(nn.Module):
         sig_t_vec = [1]
         i=1
         while sig_t_vec[-1] > 0.01:
-            sig_t_vec.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
+            sig_t_vec.append((1-0.3 * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
         '''
         EHy = EH(y)
@@ -395,6 +395,52 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         self.beta=0.05
         return x_t
+    def forward_3p5(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True):
+        # Implments ImMAP 3, basically just DiffPIR
+        # Set initial conditions
+        x_t, t, _, _, y = self.init_diff(y, noise_level)
+        sigma_y = noise_level
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        self.beta=0.5
+        # Precompute EHy for calculation
+        '''
+        sig_t_sched = [1]
+        i=1
+        while sig_t_sched[-1] > 0.01:
+            sig_t_sched.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_sched[i-1])
+            i=i+1
+        EHy = EH(y)
+        '''
+        sigma_t = 1
+        sig_t_sched = torch.linspace(1, 0.001, 100)
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                sigma_t = sig_t_sched[t-1]
+                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                gamma_t = sigma_t*h_t*((1-self.beta))**0.5
+                noise = torch.randn_like(x_t)
+                '''
+                def A(x, E = E, EH = EH):
+                    return EH(E(x)) + p_t*x
+                v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1000, tol=1e-3, verbose = False)
+                '''
+                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                    saveimg(x_t, fname)
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}. p_t: {p_t}")
+                t = t + 1
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
+        self.beta=0.05
+        return x_t
+
 
 def main():
     # test on one specific sample
@@ -460,9 +506,10 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
-    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
-    immap2_5_out, prox_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    # immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
+    # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
+    # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
     
@@ -483,22 +530,22 @@ def main():
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
-    
+    '''
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
     print(f"ImMAP1 SSIM:{ssim_1}")
-    '''
+    
     psnr_1 = psnr(gnd_truth[brain_mask], e2e_recon[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], e2e_recon[:, :, min_x:max_x, min_y:max_y])
     print(f"LPDSNet Recon PSNR:{psnr_1}")
     print(f"LPDSNet SSIM:{ssim_1}")
-    '''
+    
     psnr_2 = psnr(gnd_truth[brain_mask], immap2_out[0, 0, brain_mask])
     ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2 PSNR:{psnr_2}")
     print(f"ImMAP2 SSIM:{ssim_2}")
-
+    '''
     breakpoint()
 
 if __name__ == "__main__":
