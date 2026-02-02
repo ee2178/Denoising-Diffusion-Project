@@ -400,14 +400,14 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Bring up to a reasonable noise level 
-        sigma_T = 0.1
+        sigma_T = 0.2
         EHy = EH(y)
         if recon is None:
             recon = EHy[None, None]
         x_t = recon + sigma_T*torch.randn_like(recon)
 
         # Perform regular immap2.5 iterations
-        sig_t_vec = torch.linspace(sigma_T, 0.001, 10)
+        sig_t_vec = torch.linspace(sigma_T, 0.001, int(sigma_T*100))
         sigma_t = 1
         with torch.no_grad():
             while sigma_t > self.sigma_L:
