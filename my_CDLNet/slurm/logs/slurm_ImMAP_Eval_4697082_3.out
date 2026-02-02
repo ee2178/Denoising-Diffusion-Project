@@ -1,0 +1,37 @@
+Running ImMAP mode = 
+Saving to eval_results/immap__mask.txt
+Using device cuda:0.
+{'model': {'C': 1, 'K': 30, 'M': 169, 'P': 7, 'adaptive': True, 's': 2},
+ 'paths': {'ckpt': 'trained_nets/CDLNet-s2030/net.ckpt',
+           'save': 'trained_nets/LPDSNet'},
+ 'train': {'fit': {'backtrack_thresh': 2,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'epochs': 6000,
+                   'mcsure': False,
+                   'noise_std': [0, 126],
+                   'save_freq': 5,
+                   'val_freq': 50,
+                   'verbose': True},
+           'loaders': {'batch_size': 10,
+                       'crop_size': 256,
+                       'end_slice': 8,
+                       'load_color': False,
+                       'scaling_fac': 2000.0,
+                       'start_slice': 0,
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']},
+           'opt': {'lr': 0.001},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'CDLNet'}
+Initializing net from trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Total Number of Parameters: 755,430
+Using trained_nets/LPDSNet ...
+Initializing net from trained_nets/LPDS_mixedimmap/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Total Number of Parameters: 760,560
+Using trained_nets/LPDS_mixedimmap ...

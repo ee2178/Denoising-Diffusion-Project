@@ -1,0 +1,137 @@
+Running ImMAP mode = 3.5
+Saving to eval_results/immap_3p5_mask.txt
+Using device cuda:0.
+{'model': {'C': 1, 'K': 30, 'M': 169, 'P': 7, 'adaptive': True, 's': 2},
+ 'paths': {'ckpt': 'trained_nets/CDLNet-s2030/net.ckpt',
+           'save': 'trained_nets/LPDSNet'},
+ 'train': {'fit': {'backtrack_thresh': 2,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'epochs': 6000,
+                   'mcsure': False,
+                   'noise_std': [0, 126],
+                   'save_freq': 5,
+                   'val_freq': 50,
+                   'verbose': True},
+           'loaders': {'batch_size': 10,
+                       'crop_size': 256,
+                       'end_slice': 8,
+                       'load_color': False,
+                       'scaling_fac': 2000.0,
+                       'start_slice': 0,
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/train'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/test'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val']},
+           'opt': {'lr': 0.001},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'CDLNet'}
+Initializing net from trained_nets/CDLNet-s2030/net.ckpt ...
+Loading net state-dict...
+Total Number of Parameters: 755,430
+Using trained_nets/LPDSNet ...
+Initializing net from trained_nets/LPDS_mixedimmap/net.ckpt ...
+Loading net state-dict...
+Loading opt state-dict...
+Loading sched state-dict...
+Total Number of Parameters: 760,560
+Using trained_nets/LPDS_mixedimmap ...
+Iteration 1 complete. Noise level: 1.0. p_t: 0.009999999776482582
+Iteration 2 complete. Noise level: 0.9899091124534607. p_t: 0.01010245643556118
+Iteration 3 complete. Noise level: 0.9798181653022766. p_t: 0.010208097286522388
+Iteration 4 complete. Noise level: 0.9697272777557373. p_t: 0.010317050851881504
+Iteration 5 complete. Noise level: 0.959636390209198. p_t: 0.010429458692669868
+Iteration 6 complete. Noise level: 0.9495454430580139. p_t: 0.01054547168314457
+Iteration 7 complete. Noise level: 0.9394545555114746. p_t: 0.01066524162888527
+Iteration 8 complete. Noise level: 0.9293636083602905. p_t: 0.010788935236632824
+Iteration 9 complete. Noise level: 0.9192727208137512. p_t: 0.010916722938418388
+Iteration 10 complete. Noise level: 0.9091818332672119. p_t: 0.011048790067434311
+Iteration 11 complete. Noise level: 0.8990908861160278. p_t: 0.011185327544808388
+Iteration 12 complete. Noise level: 0.8889999985694885. p_t: 0.011326543055474758
+Iteration 13 complete. Noise level: 0.8789091110229492. p_t: 0.011472648940980434
+Iteration 14 complete. Noise level: 0.8688181638717651. p_t: 0.011623876169323921
+Iteration 15 complete. Noise level: 0.8587272763252258. p_t: 0.011780464090406895
+Iteration 16 complete. Noise level: 0.8486363887786865. p_t: 0.011942672543227673
+Iteration 17 complete. Noise level: 0.8385454416275024. p_t: 0.012110773473978043
+Iteration 18 complete. Noise level: 0.8284545540809631. p_t: 0.012285050936043262
+Iteration 19 complete. Noise level: 0.8183636665344238. p_t: 0.012465816922485828
+Iteration 20 complete. Noise level: 0.8082727193832397. p_t: 0.012653394602239132
+Iteration 21 complete. Noise level: 0.7981818318367004. p_t: 0.01284813228994608
+Iteration 22 complete. Noise level: 0.7880908846855164. p_t: 0.013050398789346218
+Iteration 23 complete. Noise level: 0.777999997138977. p_t: 0.013260584324598312
+Iteration 24 complete. Noise level: 0.7679091095924377. p_t: 0.013479111716151237
+Iteration 25 complete. Noise level: 0.7578181624412537. p_t: 0.013706427067518234
+Iteration 26 complete. Noise level: 0.7477272748947144. p_t: 0.013943005353212357
+Iteration 27 complete. Noise level: 0.737636387348175. p_t: 0.014189360663294792
+Iteration 28 complete. Noise level: 0.727545440196991. p_t: 0.014446038752794266
+Iteration 29 complete. Noise level: 0.7174545526504517. p_t: 0.014713620766997337
+Iteration 30 complete. Noise level: 0.7073636651039124. p_t: 0.014992737211287022
+Iteration 31 complete. Noise level: 0.6972727179527283. p_t: 0.015284061431884766
+Iteration 32 complete. Noise level: 0.687181830406189. p_t: 0.015588310547173023
+Iteration 33 complete. Noise level: 0.6770908832550049. p_t: 0.015906265005469322
+Iteration 34 complete. Noise level: 0.6669999957084656. p_t: 0.016238758340477943
+Iteration 35 complete. Noise level: 0.6569091081619263. p_t: 0.01658669114112854
+Iteration 36 complete. Noise level: 0.6468181610107422. p_t: 0.01695103570818901
+Iteration 37 complete. Noise level: 0.6367272734642029. p_t: 0.017332840710878372
+Iteration 38 complete. Noise level: 0.6266363859176636. p_t: 0.017733236774802208
+Iteration 39 complete. Noise level: 0.6165454387664795. p_t: 0.01815345510840416
+Iteration 40 complete. Noise level: 0.6064545512199402. p_t: 0.01859482005238533
+Iteration 41 complete. Noise level: 0.5963636636734009. p_t: 0.01905878074467182
+Iteration 42 complete. Noise level: 0.5862727165222168. p_t: 0.019546903669834137
+Iteration 43 complete. Noise level: 0.5761818289756775. p_t: 0.02006089873611927
+Iteration 44 complete. Noise level: 0.5660909414291382. p_t: 0.020602621138095856
+Iteration 45 complete. Noise level: 0.5559999942779541. p_t: 0.0211741104722023
+Iteration 46 complete. Noise level: 0.5459091067314148. p_t: 0.021777579560875893
+Iteration 47 complete. Noise level: 0.5358181595802307. p_t: 0.022415466606616974
+Iteration 48 complete. Noise level: 0.5257272720336914. p_t: 0.023090433329343796
+Iteration 49 complete. Noise level: 0.5156363844871521. p_t: 0.023805413395166397
+Iteration 50 complete. Noise level: 0.505545437335968. p_t: 0.024563636630773544
+Iteration 51 complete. Noise level: 0.4954545497894287. p_t: 0.02536865323781967
+Iteration 52 complete. Noise level: 0.485363632440567. p_t: 0.026224404573440552
+Iteration 53 complete. Noise level: 0.4752727150917053. p_t: 0.02713523991405964
+Iteration 54 complete. Noise level: 0.46518179774284363. p_t: 0.02810598723590374
+Iteration 55 complete. Noise level: 0.4550909101963043. p_t: 0.029142025858163834
+Iteration 56 complete. Noise level: 0.4449999928474426. p_t: 0.0302493367344141
+Iteration 57 complete. Noise level: 0.43490907549858093. p_t: 0.031434617936611176
+Iteration 58 complete. Noise level: 0.4248181879520416. p_t: 0.032705359160900116
+Iteration 59 complete. Noise level: 0.41472727060317993. p_t: 0.034069985151290894
+Iteration 60 complete. Noise level: 0.40463635325431824. p_t: 0.035537973046302795
+Iteration 61 complete. Noise level: 0.39454543590545654. p_t: 0.0371200330555439
+Iteration 62 complete. Noise level: 0.38445454835891724. p_t: 0.0388282872736454
+Iteration 63 complete. Noise level: 0.37436363101005554. p_t: 0.0406765341758728
+Iteration 64 complete. Noise level: 0.36427271366119385. p_t: 0.04268050193786621
+Iteration 65 complete. Noise level: 0.35418182611465454. p_t: 0.0448581762611866
+Iteration 66 complete. Noise level: 0.34409090876579285. p_t: 0.04723024368286133
+Iteration 67 complete. Noise level: 0.33399999141693115. p_t: 0.049820542335510254
+Iteration 68 complete. Noise level: 0.32390907406806946. p_t: 0.05265667662024498
+Iteration 69 complete. Noise level: 0.31381818652153015. p_t: 0.05577077716588974
+Iteration 70 complete. Noise level: 0.30372726917266846. p_t: 0.05920039117336273
+Iteration 71 complete. Noise level: 0.29363635182380676. p_t: 0.06298962980508804
+Iteration 72 complete. Noise level: 0.28354546427726746. p_t: 0.06719058007001877
+Iteration 73 complete. Noise level: 0.27345454692840576. p_t: 0.07186513394117355
+Iteration 74 complete. Noise level: 0.26336362957954407. p_t: 0.07708724588155746
+Iteration 75 complete. Noise level: 0.2532727122306824. p_t: 0.08294589072465897
+Iteration 76 complete. Noise level: 0.24318180978298187. p_t: 0.08954887092113495
+Iteration 77 complete. Noise level: 0.23309090733528137. p_t: 0.09702786058187485
+Iteration 78 complete. Noise level: 0.22299998998641968. p_t: 0.10554495453834534
+Iteration 79 complete. Noise level: 0.21290908753871918. p_t: 0.11530154943466187
+Iteration 80 complete. Noise level: 0.20281818509101868. p_t: 0.1265503466129303
+Iteration 81 complete. Noise level: 0.19272726774215698. p_t: 0.13961195945739746
+Iteration 82 complete. Noise level: 0.18263636529445648. p_t: 0.15489789843559265
+Iteration 83 complete. Noise level: 0.1725454479455948. p_t: 0.17294341325759888
+Iteration 84 complete. Noise level: 0.1624545454978943. p_t: 0.1944550722837448
+Iteration 85 complete. Noise level: 0.1523636281490326. p_t: 0.2203810065984726
+Iteration 86 complete. Noise level: 0.1422727257013321. p_t: 0.25201690196990967
+Iteration 87 complete. Noise level: 0.1321818232536316. p_t: 0.2911715805530548
+Iteration 88 complete. Noise level: 0.1220909059047699. p_t: 0.3404311239719391
+Iteration 89 complete. Noise level: 0.1119999960064888. p_t: 0.40359699726104736
+Iteration 90 complete. Noise level: 0.1019090861082077. p_t: 0.4864422380924225
+Iteration 91 complete. Noise level: 0.0918181836605072. p_t: 0.5980790853500366
+Iteration 92 complete. Noise level: 0.0817272737622261. p_t: 0.7535760998725891
+Iteration 93 complete. Noise level: 0.07163636386394501. p_t: 0.9793229699134827
+Iteration 94 complete. Noise level: 0.06154545396566391. p_t: 1.325012445449829
+Iteration 95 complete. Noise level: 0.05145454406738281. p_t: 1.893523931503296
+Iteration 96 complete. Noise level: 0.041363634169101715. p_t: 2.9273521900177
+Iteration 97 complete. Noise level: 0.031272727996110916. p_t: 5.117560863494873
+Iteration 98 complete. Noise level: 0.02118181809782982. p_t: 11.149062156677246
+Iteration 99 complete. Noise level: 0.011090909130871296. p_t: 40.65267562866211
+Iteration 100 complete. Noise level: 0.0010000000474974513. p_t: 5000.00390625

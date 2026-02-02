@@ -105,9 +105,11 @@ def compute_metrics(args, device):
                         elif args.immap_mode == '2':
                             recon = immap.forward_2(kspace_masked, noise_level, mask, smaps)
                         elif args.immap_mode == '2.5':
-                            recon, _, _ = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, e2enet, mode=1)
+                            recon, _, _ = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, e2enet, mode=1)
                         elif args.immap_mode=='3':
                             recon = immap.forward_3(kspace_masked, noise_level, mask, smaps)
+                        elif args.immap_mode=='3.5':
+                            recon, _, _ = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, e2enet)
                     else:
                         # This probably doesn't work anymore lol
                         recon, _ = e2enet(kspace_masked[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)

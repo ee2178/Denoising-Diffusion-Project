@@ -24,7 +24,7 @@ conda activate evrt-detr
 # -----------------------------
 # Map array index → immap_mode
 # -----------------------------
-IMMAP_MODES=(1 2 2.5 3)
+IMMAP_MODES=(3.5)
 IMMAP_MODE=${IMMAP_MODES[$SLURM_ARRAY_TASK_ID]}
 
 # Make filename-safe version (2.5 → 2p5)

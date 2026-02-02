@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 158, in <module>
+    main(args)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 150, in main
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 116, in compute_metrics
+    if torch.sum(torch.isnan(recon)) > 0:
+UnboundLocalError: local variable 'recon' referenced before assignment

@@ -276,81 +276,33 @@ class ImMAP(nn.Module):
         EHy = EH(y)
         
         sig_t_vec = torch.linspace(1, 0.001, 100)
-        if mode == 1:
-            with torch.no_grad():
-                while sigma_t > self.sigma_L:
-                    sigma_t = sig_t_vec[t-1]
-                    # update step size
-                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                    # Update noise injection
-                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                    # draw random noise
-                    noise = torch.randn_like(x_t)
-                    # Instead of performing a proximal update, use our e2e_net
-                    v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
-                    if t == 1:
-                        # grab first iterate
-                        first_it = v_t.clone()
-                    # Replace with ImMAP3 update eqn
-                    # x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
-                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
-                    if t % 5 == 0 and save_dir:
-                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
-                        saveimg(x_t, fname)
-                    if verbose == True:
-                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
-                    t = t + 1 
-                if save_dir:
-                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                sigma_t = sig_t_vec[t-1]
+                # update step size
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                # Update noise injection
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                # draw random noise
+                noise = torch.randn_like(x_t)
+                # Instead of performing a proximal update, use our e2e_net
+                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                if t == 1:
+                    # grab first iterate
+                    first_it = v_t.clone()
+                # Replace with ImMAP3 update eqn
+                # x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
+                x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                     saveimg(x_t, fname)
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}.")
+                t = t + 1 
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
                     
-        if mode == 2:
-            # This version only does the e2e conditioning for a single step at the start
-            with torch.no_grad():
-                while sigma_t > 0.05:
-                    sigma_t = sig_t_vec[t-1]
-                    # update step size
-                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                    # Update noise injection
-                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                    # draw random noise
-                    noise = torch.randn_like(x_t)
-                    # Instead of performing a proximal update, use our e2e_net
-                    v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
-                    # x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
-                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise    
-                    if t % 5 == 0 and save_dir:
-                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
-                        saveimg(x_t, fname)
-                    if verbose == True:
-                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
-                        t = t + 1
-                while sigma_t > self.sigma_L:
-                    x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
-                    sigma_t = torch.mean((x_hat_t - x_t).abs()**2)**0.5
-                    # Compute proximal weighting
-                    p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
-                    # update step size
-                    h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                    # Update noise injection
-                    gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                    # draw random noise
-                    noise = torch.randn_like(x_t)
-                    def A(x, E = E, EH = EH):
-                        return EH(E(x)) + p_t*x
-
-                    v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 10000, tol=1e-3, verbose = False)
-                    # x_t = x_t + h_t * (v_t-x_t) + gamma_t*noise
-                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
-                    if t % 5 == 0 and save_dir:
-                        fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
-                        saveimg(x_t, fname)
-                    if verbose == True:
-                        print(f"Iteration {t} complete. Noise level: {sigma_t}.")
-                    t = t + 1
-                if save_dir:
-                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
-                    saveimg(x_t, fname)
         sigma_t=0.01
         v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
 
@@ -410,8 +362,9 @@ class ImMAP(nn.Module):
         while sig_t_sched[-1] > 0.01:
             sig_t_sched.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_sched[i-1])
             i=i+1
-        EHy = EH(y)
         '''
+        EHy = EH(y)
+        
         sigma_t = 1
         sig_t_sched = torch.linspace(1, 0.001, 100)
         with torch.no_grad():
@@ -440,8 +393,49 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         self.beta=0.05
         return x_t
+    def forward_4(self, y, noise_level, acceleration_map, smaps, e2e_net, recon=None, save_dir = None, verbose = True):
+        # In immap4, we take in a given reconstruction, add noise, and then proceed. 
+        x_t, t, _, _, y = self.init_diff(y, noise_level)
+        sigma_y = noise_level
+        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
+        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        # Bring up to a reasonable noise level 
+        sigma_T = 0.1
+        EHy = EH(y)
+        if recon is None:
+            recon = EHy[None, None]
+        x_t = recon + sigma_T*torch.randn_like(recon)
 
-
+        # Perform regular immap2.5 iterations
+        sig_t_vec = torch.linspace(sigma_T, 0.001, 50)
+        sigma_t = 1
+        with torch.no_grad():
+            while sigma_t > self.sigma_L:
+                sigma_t = sig_t_vec[t-1]
+                # update step size
+                h_t = self.h_0 * t/(1+self.h_0*(t-1))
+                # Update noise injection
+                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
+                # draw random noise
+                noise = torch.randn_like(x_t)
+                # Instead of performing a proximal update, use our e2e_net
+                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                if t == 1:
+                    # grab first iterate
+                    first_it = v_t.clone()
+                # Replace with ImMAP3 update eqn
+                # x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
+                x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
+                if t % 5 == 0 and save_dir:
+                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
+                    saveimg(x_t, fname)
+                if verbose == True:
+                    print(f"Iteration {t} complete. Noise level: {sigma_t}.")
+                t = t + 1
+            if save_dir:
+                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
+                saveimg(x_t, fname)
+        return x_t
 def main():
     # test on one specific sample
     ngpu = torch.cuda.device_count()
@@ -493,7 +487,6 @@ def main():
 
     net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
-    
 
     # Load LPDSNet
     lpds_args_file = open("mri_config.json")
@@ -509,7 +502,10 @@ def main():
     # immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
     # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
-    immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
+    # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
+
+    immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
+
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
     
@@ -526,11 +522,16 @@ def main():
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
     
+    psnr_4 = psnr(gnd_truth[brain_mask], immap4_out[0, 0, brain_mask])
+    ssim_4 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap4_out[:, :, min_x:max_x, min_y:max_y])
+    print(f"ImMAP4 PSNR:{psnr_4}")
+    print(f"ImMAP4 SSIM:{ssim_4}")
+
+    '''
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
-    '''
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
