@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 148, in <module>
+    main(args)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 140, in main
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 113, in compute_metrics
+    PSNR = PSNR + psnr(recon[0,0,brain_mask], gnd_truth[brain_mask])
+IndexError: The shape of the mask [768, 396] at index 0 does not match the shape of the indexed tensor [1, 1, 768, 396] at index 0

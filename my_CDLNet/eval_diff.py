@@ -10,7 +10,7 @@ import h5py
 
 from pprint import pprint
 from diff_model import ImMAP
-from mri_utils import make_acc_mask
+from mri_utils import make_acc_mask, espirit
 from metrics import psnr, nrmse, ssim
 
 import argparse
@@ -25,6 +25,7 @@ parser.add_argument("--slice_range", type = tuple, help="Slice range for evaluat
 parser.add_argument("--save_name", type = str, help="Name of file to save results to", default="results.txt")
 parser.add_argument("--eval_e2e", type = str, help="True if want to evaluate e2e LPDSNet", default=False)
 parser.add_argument("--e2e_path", type = str, help="Corresponding path where e2enet args can be found", default = "mri_config.json")
+parser.add_argument("--immap_mode", type = str, help="Choose the mode of immap we want to evaluate (1, 2, 2.5, 3)", default = 1)
 
 args = parser.parse_args()
 
@@ -55,6 +56,18 @@ def prep_data(fname, device, slice, smap_path, kspace_path, K = 2e3):
     kspace_masked = mask * kspace
 
     return kspace, kspace_masked, mask, smaps, gnd_truth
+
+def compute_brain_mask(masked_kspace, acs_size=(24, 24)):
+    espirit_smaps = torch.flip(espirit(masked_kspace), dims = (-2, -1))
+    brain_mask = torch.norm(espirit_smaps[0], dim = 0) != 0
+
+    nnzs = torch.nonzero(brain_mask*1)
+    max_x = torch.max(nnzs[:, 0])
+    min_x = torch.min(nnzs[:, 0])
+
+    max_y = torch.max(nnzs[:, 1])
+    min_y = torch.min(nnzs[:, 1])
+    return brain_mask, min_x, max_x, min_y, max_y
 
 def compute_metrics(args, device):
     # Load denoiser
@@ -87,7 +100,14 @@ def compute_metrics(args, device):
                     if args.eval_e2e == 'False':
                         # Use first line for regular immap
                         # recon = immap.forward_2_e2e_conditioned(kspace_masked, noise_level, mask, smaps)
-                        recon = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, e2enet, mode=2)
+                        if args.immap_mode == '1':
+                            recon = immap.forward(kspace_masked, noise_level, mask, smaps)
+                        elif args.immap_mode == '2':
+                            recon = immap.forward_2(kspace_masked, noise_level, mask, smaps)
+                        elif args.immap_mode == '2.5':
+                            recon, _, _ = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, e2enet, mode=1)
+                        elif args.immap_mode=='3':
+                            recon = immap.forward_3(kspace_masked, noise_level, mask, smaps)
                     else:
                         # This probably doesn't work anymore lol
                         recon, _ = e2enet(kspace_masked[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
@@ -95,12 +115,14 @@ def compute_metrics(args, device):
                         print(f"{fname} diverged. Skipping this sample")
                         n_diverged = n_diverged + 1
                         break
+                    # Compute our brain mask
+                    brain_mask, min_x, max_x, min_y, max_y = compute_brain_mask(kspace_masked[None])                
                     # Compute PSNR
-                    PSNR = PSNR + psnr(recon, gnd_truth)
+                    PSNR = PSNR + psnr(recon[0,0,brain_mask], gnd_truth[0,0,brain_mask])
                     # Compute NRMSE
-                    NRMSE = NRMSE + nrmse(gnd_truth, recon)
+                    NRMSE = NRMSE + nrmse(gnd_truth[0,0,brain_mask], recon[0,0,brain_mask])
                     # Compute SSIM
-                    SSIM = SSIM + ssim(recon, gnd_truth)
+                    SSIM = SSIM + ssim(recon[:, :, min_x:max_x, min_y:max_y], gnd_truth[:, :, min_x:max_x, min_y:max_y])
                     # Increment count
                     count = count + 1
 

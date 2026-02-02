@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 148, in <module>
+    main(args)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 140, in main
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 111, in compute_metrics
+    brain_mask, min_x, max_x, min_y, max_y = compute_brain_mask(masked_kspace[None])                
+NameError: name 'masked_kspace' is not defined

@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 148, in <module>
+    main(args)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 140, in main
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 111, in compute_metrics
+    brain_mask, min_x, max_x, min_y, max_y = compute_brain_mask(kspace)                
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 60, in compute_brain_mask
+    espirit_smaps = torch.flip(espirit(masked_kspace), dims = (-2, -1))
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/mri_utils.py", line 275, in espirit
+    B, C, Nx, Ny = kspace.shape
+ValueError: not enough values to unpack (expected 4, got 3)

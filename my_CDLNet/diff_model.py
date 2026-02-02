@@ -288,12 +288,12 @@ class ImMAP(nn.Module):
                     noise = torch.randn_like(x_t)
                     # Instead of performing a proximal update, use our e2e_net
                     v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
-                    # x_t = x_t + h_t * (x_p-x_t) + gamma_t*noise
                     if t == 1:
                         # grab first iterate
                         first_it = v_t.clone()
                     # Replace with ImMAP3 update eqn
-                    x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
+                    # x_t = x_t + h_t * (v_t-x_t) + gamma_t * noise
+                    x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                     if t % 5 == 0 and save_dir:
                         fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
                         saveimg(x_t, fname)
@@ -460,7 +460,7 @@ def main():
     # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    immap1_out = immap.forward_3(kspace_masked, noise_level, mask, smaps, None)
+    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None)
     immap2_5_out, prox_out, first_it = immap.forward_2_e2econditioned(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # Generate brain mask 
@@ -483,13 +483,12 @@ def main():
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
-
+    
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
     print(f"ImMAP1 SSIM:{ssim_1}")
     '''
-
     psnr_1 = psnr(gnd_truth[brain_mask], e2e_recon[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], e2e_recon[:, :, min_x:max_x, min_y:max_y])
     print(f"LPDSNet Recon PSNR:{psnr_1}")

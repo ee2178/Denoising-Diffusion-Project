@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 134, in <module>
+    main(args)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 126, in main
+    nrmse, psnr, ssim, n_diverged = compute_metrics(args, device)
+  File "/vast/ee2178/Denoising-Diffusion-Project/my_CDLNet/eval_diff.py", line 94, in compute_metrics
+    if torch.sum(torch.isnan(recon)) > 0:
+TypeError: isnan(): argument 'input' (position 1) must be Tensor, not tuple

@@ -1,0 +1,4 @@
+NRMSE: 0.04657386988401413
+PSNR: 26.242277145385742 
+SSIM: tensor([0.8347], device='cuda:0') 
+Diverged: 1
