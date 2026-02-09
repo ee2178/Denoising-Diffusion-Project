@@ -230,7 +230,7 @@ class LPDSNet(nn.Module):
         if e2e_diff:
             self.l_2 = nn.Parameter(torch.zeros(K, 1, M, 1, 1))
         else:
-            self.l_2 = None
+            self.l_2 = torch.zeros(K, 1, M, 1, 1)
         
         # If we have E = None, then self.E is going to be an identity mapping (corresponding to a denoising problem)
         if E:

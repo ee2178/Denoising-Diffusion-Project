@@ -16,7 +16,7 @@
             "backtrack_thresh": 2,
             "clip_grad": 0.05,
             "demosaic": false,
-            "epochs": 6000,
+            "epochs": 1000,
             "mcsure": false,
             "noise_std": [
                 0,

@@ -117,7 +117,7 @@ def fit(net, opt, loaders,
                     # Make predictions per batch
                     if x_init:
                         # If we want to initialize our model with some x_t, then we have to generate noisy image domain observation
-                        x_t, sig_t = awgn(image, image_noise_std, dist = 'cosine')
+                        x_t, sig_t = awgn(image, image_noise_std, dist = 'log-uniform')
                         # We want to add some powerful noise to x_t and then parameterize noise as affine fcn of both sig_t and sig_y
                         img_recon, _ = net.forward_double_noise(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True, sigma_t = sig_t)
                     else:
@@ -135,7 +135,8 @@ def fit(net, opt, loaders,
                     '''
 
                     # if not mcsure then mse 
-                    loss = torch.mean(torch.abs(image - img_recon).abs()**2)
+                    mse = torch.mean((image - img_recon).abs()**2)
+                    loss = torch.mean(torch.pow(sig_t, -2)*torch.abs(image-img_recon)**2)
                     if phase == 'train':
                         # Get gradients
                         loss.backward()
@@ -147,11 +148,12 @@ def fit(net, opt, loaders,
                         # method found in the CDLNet class, projects weights onto unit ball
                         net.project()
                 loss = loss.item()
+                mse = mse.item()
 
                 if verbose:
                     total_norm = grad_norm(net.parameters())
                     t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
-                psnr = psnr - 10*np.log10(loss)
+                psnr = psnr - 10*np.log10(mse)
             
             psnr = psnr/(itern+1)
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")

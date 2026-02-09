@@ -30,8 +30,11 @@ def awgn(input, noise_std, dist = 'uniform'):
         # So, draw a uniform sample from [exp(a), exp(b)], then take its log
         # Insert tiny epsilon so to not run into numerical stability issues
         eps = 1e-8
-        sigma = torch.exp((log(noise_std[0]+eps) + \
-            (log(noise_std[1]) - log(noise_std[0]+eps))*torch.rand(len(input),1,1,1, device=input.device)))
+        #sigma = torch.exp((log(noise_std[0]+eps) + \
+        #    (log(noise_std[1]) - log(noise_std[0]+eps))*torch.rand(len(input),1,1,1, device=input.device)))
+        log_sig = math.log10(noise_std[0]+eps)+torch.rand(len(input), 1, 1, 1, device = input.device)*(math.log10(noise_std[1]+eps)-math.log10(noise_std[0]+eps))
+        sigma = 10**log_sig
+
     elif isinstance(noise_std, (list, tuple)) and dist == 'cosine':
         # Y = arcsin(X), X ~ U([0, 1])
         # Ignore noise type all together, hard code for now

@@ -81,7 +81,7 @@ def fit(net, opt, loaders,
                 batch = batch[:, None, :, :] # Insert channel dim
                 
                 # apply noise 
-                noisy_batch, sigma_n = awgn(batch, phase_nstd)
+                noisy_batch, sigma_n = awgn(batch, phase_nstd, dist='log-uniform')
                 obsrv_batch = mask * noisy_batch
                 # Reset gradients
                 opt.zero_grad()
@@ -100,8 +100,9 @@ def fit(net, opt, loaders,
                         loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
                     else:
                         # if not mcsure then mse 
-                        
-                        loss = torch.mean(torch.abs(batch[:, :, 0:batch_hat.shape[2], 0:batch_hat.shape[3]] - batch_hat)**2)
+                        # SCALE THE LOSS ACCORDING TO THE NOISE!!
+                        mse = torch.mean(torch.abs(batch - batch_hat)**2)
+                        loss = torch.mean(torch.pow(sigma_n, -2)*torch.abs(batch - batch_hat)**2)
                         
                     if phase == 'train':
                         # Get gradients
@@ -114,11 +115,11 @@ def fit(net, opt, loaders,
                         # method found in the CDLNet class, projects weights onto unit ball
                         net.project()
                 loss = loss.item()
-
+                mse = mse.item()
                 if verbose:
                     total_norm = grad_norm(net.parameters())
                     t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
-                psnr = psnr - 10*np.log10(loss)
+                psnr = psnr - 10*np.log10(mse)
             
             psnr = psnr/(itern+1)
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")

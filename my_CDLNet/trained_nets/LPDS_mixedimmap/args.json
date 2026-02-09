@@ -22,10 +22,10 @@
             "clip_grad": 0.05,
             "demosaic": false,
             "denoiser_args_path": "eval_config.json",
-            "epochs": 6000,
+            "epochs": 100,
             "image_noise_std": [
                 0,
-                255
+                126
             ],
             "mcsure": false,
             "noise_std": [

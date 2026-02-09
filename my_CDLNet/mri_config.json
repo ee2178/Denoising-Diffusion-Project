@@ -26,9 +26,9 @@
         "scaling_fac":2e3
 	},
 	"fit": {
-		"epochs": 6000,
+		"epochs": 100,
 		"noise_std": [10, 13],
-		"image_noise_std": [0, 255],
+		"image_noise_std": [0, 126],
         "val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 2,
