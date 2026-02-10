@@ -136,7 +136,7 @@ def fit(net, opt, loaders,
 
                     # if not mcsure then mse 
                     mse = torch.mean((image - img_recon).abs()**2)
-                    loss = torch.mean(torch.pow(sig_t, -2)*torch.abs(image-img_recon)**2)
+                    loss = torch.mean(torch.pow(sig_t/255., -2)*torch.abs(image-img_recon)**2)
                     if phase == 'train':
                         # Get gradients
                         loss.backward()

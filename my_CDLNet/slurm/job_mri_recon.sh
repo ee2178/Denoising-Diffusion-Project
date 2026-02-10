@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --account=torch_pr_89_general
+#SBATCH --account=torch_pr_89_tandon_advanced
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=l40s
+#SBATCH --constraint=h200
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32GB
 #SBATCH --time=48:00:00

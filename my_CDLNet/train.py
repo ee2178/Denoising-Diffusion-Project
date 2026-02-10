@@ -102,7 +102,8 @@ def fit(net, opt, loaders,
                         # if not mcsure then mse 
                         # SCALE THE LOSS ACCORDING TO THE NOISE!!
                         mse = torch.mean(torch.abs(batch - batch_hat)**2)
-                        loss = torch.mean(torch.pow(sigma_n, -2)*torch.abs(batch - batch_hat)**2)
+                        # VERY IMPORTANT TO CUT SCALING DOWN TO [0, 1]
+                        loss = torch.mean(torch.pow(sigma_n/255., -2)*torch.abs(batch - batch_hat)**2)
                         
                     if phase == 'train':
                         # Get gradients
