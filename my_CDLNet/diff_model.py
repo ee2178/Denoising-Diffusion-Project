@@ -266,17 +266,17 @@ class ImMAP(nn.Module):
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
-        
+        '''
         sig_t_vec = [1]
         i=1
         
         while sig_t_vec[-1] > 0.01:
-            sig_t_vec.append((1-0.5 * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
+            sig_t_vec.append((1-self.beta* self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_vec[i-1])
             i=i+1
-        
+        '''
         EHy = EH(y)
         
-        # sig_t_vec = torch.linspace(1, 0.001, 100)
+        sig_t_vec = torch.linspace(1, 0.001, 100)
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_vec[t-1]
@@ -444,7 +444,8 @@ def main():
     print(f"Using device {device}.")
     slice = 5
 
-    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
+    # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
+    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050163.h5"
     fname = os.path.basename(kspace_fname)
 
     # Search in val dir for corresponding smaps
@@ -505,7 +506,7 @@ def main():
     immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
-    # immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
+    immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
@@ -522,12 +523,12 @@ def main():
 
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
-    '''
+    
     psnr_4 = psnr(gnd_truth[brain_mask], immap4_out[0, 0, brain_mask])
     ssim_4 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap4_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP4 PSNR:{psnr_4}")
     print(f"ImMAP4 SSIM:{ssim_4}")
-    '''
+    
     
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
