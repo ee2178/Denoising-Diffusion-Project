@@ -24,7 +24,7 @@ def awgn(input, noise_std, dist = 'uniform'):
     elif isinstance(noise_std, (list, tuple)) and dist == 'uniform': # uniform sampling of sigma
         sigma = noise_std[0] + \
                (noise_std[1] - noise_std[0])*torch.rand(len(input),1,1,1, device=input.device)
-    elif isinstance(noise_std, (list, tuple)) and dist == 'log-uniform':
+    elif isinstance(noise_std, (list, tuple)) and dist == 'log':
         # log uniform has support [a, b], corresponding to uniform w/ support [exp(a), exp(b)].
         # We can usually assume a = 0, b = 1 for diffusion training
         # So, draw a uniform sample from [exp(a), exp(b)], then take its log

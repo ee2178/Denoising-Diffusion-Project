@@ -55,7 +55,7 @@ class MRIKSpaceDataset(data.Dataset):
 
         return kspace, smaps, image
 
-def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, scaling_fac = 1e6):
+def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, scaling_fac = 1e6, num_workers = 1):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
@@ -79,7 +79,8 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                   crop_size  = 128,
                   batch_size = [1,1,1],
                   load_color = False, 
-                  scaling_fac = 1e6):
+                  scaling_fac = 1e6,
+                  num_workers = 1):
 
     if type(batch_size) is int:
         batch_size = [batch_size, 1, 1]
@@ -90,17 +91,20 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                             load_color, 
                                             crop_size=crop_size, 
                                             test=False, 
-                                            scaling_fac = scaling_fac),
+                                            scaling_fac = scaling_fac,
+                                            num_workers = num_workers),
                    'val':   get_data_loader(val_path_list,
                                             val_kspace_path_list,
                                             batch_size[1], 
                                             load_color, 
                                             test=True, 
-                                            scaling_fac = scaling_fac),
+                                            scaling_fac = scaling_fac,
+                                            num_workers = num_workers),
                    'test':  get_data_loader(tst_path_list, 
                                             tst_kspace_path_list,
                                             batch_size[2], 
                                             load_color, 
                                             test=True, 
-                                            scaling_fac = scaling_fac)}
+                                            scaling_fac = scaling_fac,
+                                            num_workers = num_workers)}
     return dataloaders

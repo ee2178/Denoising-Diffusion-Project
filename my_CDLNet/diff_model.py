@@ -401,14 +401,14 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Bring up to a reasonable noise level 
-        sigma_T = 0.2
+        sigma_T = 0.1
         EHy = EH(y)
         if recon is None:
             recon = EHy[None, None]
         x_t = recon + sigma_T*torch.randn_like(recon)
 
         # Perform regular immap2.5 iterations
-        sig_t_vec = torch.linspace(sigma_T, 0.001, int(sigma_T*100))
+        sig_t_vec = torch.linspace(sigma_T, 0.001, int(sigma_T*100/2))
         sigma_t = 1
         with torch.no_grad():
             while sigma_t > self.sigma_L:
@@ -444,8 +444,8 @@ def main():
     print(f"Using device {device}.")
     slice = 5
 
-    # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
-    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
+    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
+    # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
     fname = os.path.basename(kspace_fname)
 
     # Search in val dir for corresponding smaps

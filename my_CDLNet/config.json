@@ -22,7 +22,8 @@
 		"load_color": false,
 		"start_slice": 0,
 		"end_slice": 8,
-        "scaling_fac":2e3
+        "scaling_fac":2e3,
+        "num_workers": 14
 	},
 	"fit": {
 		"epochs": 1000,
@@ -33,7 +34,8 @@
 		"verbose": true,
 		"clip_grad": 5e-2,
 		"demosaic": false,
-		"mcsure": false
+		"mcsure": false,
+        "noise_dist": "log"
 	},
 	"opt": {
 		"lr": 1e-3

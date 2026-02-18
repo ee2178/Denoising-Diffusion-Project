@@ -11,7 +11,7 @@ import torchvision.transforms.functional as F
 from tqdm import tqdm
 
 class MRIDataset(data.Dataset):
-    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False):
+    def __init__(self, root_dirs, transform, load_color=False, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False, num_workers = 1):
         self.image_paths = []
         self.image_list = []
         self.start_slice = start_slice
@@ -75,7 +75,7 @@ class MRIDataset(data.Dataset):
             # Don't bother with transformations on volumes
             return image, smaps, slice, self.image_paths[idx]
 
-def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False):
+def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False, num_workers = 1):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
@@ -86,7 +86,7 @@ def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, te
                                   ])
         # xfm = None
 
-    return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac, get_smaps = get_smaps),
+    return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac, get_smaps = get_smaps, num_workers = num_workers),
                            batch_size = batch_size,
                            drop_last  = (not test),
                            shuffle    = (not test))
@@ -99,7 +99,8 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                   load_color = False, 
                   start_slice = 0, 
                   end_slice = 8,
-                  scaling_fac = 1e6):
+                  scaling_fac = 1e6, 
+                  num_workers = 1):
 
     if type(batch_size) is int:
         batch_size = [batch_size, 1, 1]
@@ -111,19 +112,22 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                           test=False, 
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
-                                          scaling_fac = scaling_fac),
+                                          scaling_fac = scaling_fac,
+                                          num_workers = num_workers),
                    'val':   get_data_loader(val_path_list, 
                                           batch_size[1], 
                                           load_color, 
                                           test=True, 
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
-                                          scaling_fac = scaling_fac),
+                                          scaling_fac = scaling_fac,
+                                          num_workers = num_workers),
                    'test':  get_data_loader(tst_path_list, 
                                           batch_size[2], 
                                           load_color, 
                                           test=True, 
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
-                                          scaling_fac = scaling_fac)}
+                                          scaling_fac = scaling_fac,
+                                          num_workers = num_workers)}
     return dataloaders

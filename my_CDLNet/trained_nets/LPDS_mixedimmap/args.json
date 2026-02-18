@@ -28,6 +28,7 @@
                 126
             ],
             "mcsure": false,
+            "noise_dist": "log",
             "noise_std": [
                 10,
                 13
@@ -40,6 +41,7 @@
         "loaders": {
             "batch_size": 1,
             "crop_size": 256,
+            "num_workers": 14,
             "scaling_fac": 2000.0,
             "trn_kspace_path_list": [
                 "../../datasets/fastmri/brain/multicoil_train"

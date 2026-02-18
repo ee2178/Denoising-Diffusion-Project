@@ -5,8 +5,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --constraint=h200
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=32GB
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64GB
 #SBATCH --time=48:00:00
 #SBATCH --job-name=LPDSNet-FastMRI-MRI-Reconstruction-IMMAP2p5
 #SBATCH --mail-type=BEGIN,END,FAIL

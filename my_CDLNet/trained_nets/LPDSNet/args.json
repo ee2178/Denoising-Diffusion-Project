@@ -18,6 +18,7 @@
             "demosaic": false,
             "epochs": 1000,
             "mcsure": false,
+            "noise_dist": "log",
             "noise_std": [
                 0,
                 126
@@ -31,6 +32,7 @@
             "crop_size": 256,
             "end_slice": 8,
             "load_color": false,
+            "num_workers": 14,
             "scaling_fac": 2000.0,
             "start_slice": 0,
             "trn_path_list": [

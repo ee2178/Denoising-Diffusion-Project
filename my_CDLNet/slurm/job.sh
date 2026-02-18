@@ -5,16 +5,14 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --constraint=h200
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=32GB
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64GB
 #SBATCH --time=48:00:00
 #SBATCH --job-name=LPDSNet-FastMRI
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=logs/slurm_%j.out
 #SBATCH --error=logs/slurm_%j.err
-
-module load cuda/11.6.2
 
 # Activate Conda environment
 

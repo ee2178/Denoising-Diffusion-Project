@@ -42,7 +42,8 @@ def fit(net, opt, loaders,
         val_freq = 1,
         save_freq = 1,
         epoch_fun = None, 
-        mcsure = False, 
+        mcsure = False,
+        noise_dist = 'uniform',
         backtrack_thresh = 1):
     
     # Train the model
@@ -81,7 +82,7 @@ def fit(net, opt, loaders,
                 batch = batch[:, None, :, :] # Insert channel dim
                 
                 # apply noise 
-                noisy_batch, sigma_n = awgn(batch, phase_nstd, dist='log-uniform')
+                noisy_batch, sigma_n = awgn(batch, phase_nstd, dist=noise_dist)
                 obsrv_batch = mask * noisy_batch
                 # Reset gradients
                 opt.zero_grad()
