@@ -409,7 +409,7 @@ class ImMAP(nn.Module):
         x_t = recon + sigma_T*torch.randn_like(recon)
 
         # Perform regular immap2.5 iterations
-        sig_t_vec = torch.linspace(sigma_T, 0.001, int(sigma_T*100))
+        sig_t_vec = torch.linspace(sigma_T, 0.001, int(sigma_T*100/2))
         sigma_t = 1
         with torch.no_grad():
             while sigma_t > self.sigma_L:
