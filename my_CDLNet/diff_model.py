@@ -490,16 +490,23 @@ def main():
     net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
 
-    # Load LPDSNet
-    lpds_args_file = open("mri_config.json")
+    # Load LPDSNet for ImMAP 2.5
+    lpds_args_file = open("immap2p5_config.json")
     lpds_args = json.load(lpds_args_file)
     lpds_args_file.close()
 
     lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
-    # Make a noisy kspace measurement
+   
+    # Load LPDSNet
+    e2e_args_file = open("mri_config.json")
+    e2e_args = json.load(e2e_args_file)
+    e2e_args_file.close()
+
+    lpdsnet_e2e, _, _, _ = train.init_model(lpds_args, device = device)
+
     noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    # e2e_recon, _ = lpdsnet(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
-    
+    e2e_recon, _ = lpdsnet_e2e(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
+
     immap = ImMAP(net)
     '''
     immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
@@ -508,7 +515,7 @@ def main():
     # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
-    immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
+    immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, recon=e2e_recon, save_dir = None, verbose = True)
     
     # Generate brain mask 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))
