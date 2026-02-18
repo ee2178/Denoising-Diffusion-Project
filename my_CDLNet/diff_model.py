@@ -505,7 +505,7 @@ def main():
     immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None, verbose=True)
     '''
-    immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
+    # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
     immap4_out = immap.forward_4(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
@@ -525,18 +525,15 @@ def main():
 
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
-    '''
     psnr_4 = psnr(gnd_truth[brain_mask], immap4_out[0, 0, brain_mask])
     ssim_4 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap4_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP4 PSNR:{psnr_4}")
     print(f"ImMAP4 SSIM:{ssim_4}")
     '''
-    
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
-    '''
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
