@@ -10,7 +10,7 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/LPDS_mixedimmap",
+	"save": "trained_nets/LPDS_MRI_Recon",
 	"ckpt": "trained_nets/LPDS_MRI_Recon/net.ckpt"
 },
 "train": {

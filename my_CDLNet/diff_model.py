@@ -401,9 +401,10 @@ class ImMAP(nn.Module):
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Bring up to a reasonable noise level 
-        sigma_T = 0.1
+        sigma_T = 0.2
         EHy = EH(y)
         if recon is None:
+            breakpoint()
             recon = EHy[None, None]
         x_t = recon + sigma_T*torch.randn_like(recon)
 
