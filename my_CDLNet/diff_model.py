@@ -488,9 +488,9 @@ def main():
     
     save_dir = "diff_figs"
 
-    net, _, _, _ = train.init_model(model_args, device=device, quant_ckpt = True)
+    net, _, _, epoch = train.init_model(model_args, device=device, quant_ckpt = True)
     net.eval()
-
+    breakpoint()
     # Load LPDSNet for ImMAP 2.5
     lpds_args_file = open("immap2p5_config.json")
     lpds_args = json.load(lpds_args_file)
@@ -509,10 +509,9 @@ def main():
     e2e_recon, _ = lpdsnet_e2e(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    '''
     immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
     immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None, verbose=True)
-    '''
+    
     # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
@@ -542,21 +541,15 @@ def main():
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
+    '''
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
     print(f"ImMAP1 SSIM:{ssim_1}")
-    
-    psnr_1 = psnr(gnd_truth[brain_mask], e2e_recon[0, 0, brain_mask])
-    ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], e2e_recon[:, :, min_x:max_x, min_y:max_y])
-    print(f"LPDSNet Recon PSNR:{psnr_1}")
-    print(f"LPDSNet SSIM:{ssim_1}")
-    
     psnr_2 = psnr(gnd_truth[brain_mask], immap2_out[0, 0, brain_mask])
     ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2 PSNR:{psnr_2}")
     print(f"ImMAP2 SSIM:{ssim_2}")
-    '''
     breakpoint()
 
 if __name__ == "__main__":

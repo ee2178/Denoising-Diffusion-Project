@@ -149,26 +149,25 @@ def fit(net, opt, loaders,
                         # method found in the CDLNet class, projects weights onto unit ball
                         net.project()
                 # loss = loss.item()
-                mse = mse.item()
 
                 if verbose:
                     total_norm = grad_norm(net.parameters())
                     t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
-                psnr = psnr - 10*np.log10(mse)
-            
+                psnr = psnr - 10*torch.log10(mse)
+            psnr = psnr.item()
             psnr = psnr/(itern+1)
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
 
             if psnr > top_psnr[phase]:
                 top_psnr[phase] = psnr
             # backtracking check
-            elif (psnr + backtrack_thresh < top_psnr[phase]) or np.isnan(loss) or np.isinf(loss):
+            elif (psnr + backtrack_thresh < top_psnr[phase]) or torch.isnan(loss) or torch.isinf(loss):
                 break
 
             with open(os.path.join(save_dir, f'{phase}.txt'),'a') as psnr_file:
                 psnr_file.write(f'{psnr:.3f}, ')
 
-        if (psnr + backtrack_thresh < top_psnr[phase]) or np.isnan(loss) or np.isinf(loss):
+        if (psnr + backtrack_thresh < top_psnr[phase]) or torch.isnan(loss) or torch.isinf(loss):
             ckpt_path = os.path.join(save_dir, 'net.ckpt')
             if epoch <= save_freq:  
                 ckpt_path = os.path.join(save_dir, '0.ckpt')
