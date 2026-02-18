@@ -87,7 +87,7 @@ def detect_acc_mask(y):
     return mask
 
 
-def make_acc_mask(
+def make_acc_mask_random(
     shape,
     accel,
     acs_lines=24,
@@ -95,42 +95,15 @@ def make_acc_mask(
     variable_density=False,
     dim=1
 ):
-    """
-    Create a diagonal undersampling matrix D for MRI.
-    D is diag(mask.flatten()) so that D @ image_vec applies undersampling.
-    Parameters
-    ----------
-    shape : tuple (Ny, Nx)
-        k-space shape.
-    accel : float
-        Acceleration factor.
-    acs_lines : int
-        Number of central fully-sampled lines.
-    seed : int or None
-        RNG seed.
-    variable_density : bool
-        Use variable-density random sampling.
-    dim : int
-        Dimension to undersample (default = 1).
-    Returns
-    -------
-    D : torch.sparse_coo_tensor
-        A diagonal sparse matrix such that D @ vec(image) applies the mask.
-    mask : torch.Tensor
-        The 2D binary mask (Ny, Nx).
-    """
     Ny, Nx = shape
     N = shape[dim]
-
     # Build empty mask
     mask = torch.zeros((Ny, Nx), dtype=torch.float32)
-    
     # Determine how many samples to keep
     n_total = N
     n_acs = acs_lines
     n_outer = n_total - n_acs
     n_keep_outer = math.floor(n_outer / accel)
-
     # Build PDF
     if variable_density:
         x = torch.linspace(-1, 1, N)
@@ -138,7 +111,6 @@ def make_acc_mask(
         pdf = pdf / pdf.sum()
     else:
         pdf = torch.ones(N) / N
-
     # Remove ACS region from PDF
     center = N // 2
     half_acs = n_acs // 2
@@ -147,22 +119,54 @@ def make_acc_mask(
 
     if seed is not None:
         torch.manual_seed(seed)
-
     # Draw outer samples
     idx_outer = torch.multinomial(pdf, n_keep_outer, replacement=False)
     idx_acs = torch.arange(center - half_acs, center + half_acs)
     idx_keep = torch.cat([idx_outer, idx_acs]).unique()
-    
     # Fill mask
     mask.index_fill_(dim, idx_keep, 1.0)
-
     # ---- Create dense diagonal matrix ----
     flat = mask.flatten()     # length Npix
-    
     # From flat, generate a matrix that we can use as a matrix multiply
     D = torch.diag(flat[0:N])      # <-- full dense matrix
-    
     return D, mask
+
+def make_acc_mask(
+    shape,
+    accel,
+    acs_lines=24,
+    dim=1,
+):
+    """
+    Uniform Cartesian subsampling mask with fully-sampled ACS.
+    shape: (Ny, Nx)
+    accel: acceleration factor (R)
+    acs_lines: number of fully-sampled center lines
+    dim: dimension along which to subsample (0 = y, 1 = x)
+    """
+    Ny, Nx = shape
+    N = shape[dim]
+    # Initialize empty mask
+    mask = torch.zeros((Ny, Nx), dtype=torch.float32)
+    # ACS region
+    center = N // 2
+    half_acs = acs_lines // 2
+    acs_start = center - half_acs
+    acs_end   = center + half_acs
+    # Uniform outer sampling
+    outer_idx = torch.arange(0, N, accel)
+    # Remove indices that fall inside ACS
+    outer_idx = outer_idx[
+        (outer_idx < acs_start) | (outer_idx >= acs_end)
+    ]
+    # ACS indices
+    acs_idx = torch.arange(acs_start, acs_end)
+    # Combine
+    idx_keep = torch.cat([outer_idx, acs_idx]).unique()
+    # Fill mask
+    mask.index_fill_(dim, idx_keep, 1.0)
+    return mask
+
 
 def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
     """
