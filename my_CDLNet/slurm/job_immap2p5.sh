@@ -20,4 +20,4 @@ conda activate env      # Replace with your actual env name
 
 # Navigate to the directory containing train.py
 cd ~/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet       # Replace with the actual path
-python3 train_mri_recon.py immap2p5.json
+python3 train_mri_recon.py immap2p5_config.json

@@ -68,15 +68,10 @@ def fit(net, opt, loaders,
     top_psnr = {"train": 0, "val": 0, "test": 0} # for backtracking
     epoch = start_epoch
     
-    # Do NOT DO THIS
-    '''
-    if x_init:
-        # if we are using a denoiser starting point, then we must load it in:
-        dnsr_args_file = open(denoiser_args_path)
-        dnsr_args = json.load(dnsr_args_file)
-        dnsr_args_file.close()
-        dnsr, _, _, _ = init_model(dnsr_args, device=device)
-    '''
+    # We are using a uniform mask, so do not have to make one every iteration
+    mask = make_acc_mask(shape = (kspace.shape[-2], kspace.shape[-1]), accel = R, acs_lines = acs_lines)
+    mask = mask.to(device)
+
     # start at the correct epoch, iterate up until number of epochs prescribed
     while epoch < start_epoch + epochs:
         # separate based on training phase
@@ -100,12 +95,6 @@ def fit(net, opt, loaders,
                 kspace = kspace.to(device)
                 smaps = smaps.to(device)
                 image = image.to(device)
-
-                # generate a mask 
-                _, mask = make_acc_mask(shape = (kspace.shape[-2], kspace.shape[-1]), accel = R, acs_lines = acs_lines)
-                
-                mask = mask.to(device)
-
                 # Generate a masked kspace sample
                 kspace_masked = mask * kspace
                 

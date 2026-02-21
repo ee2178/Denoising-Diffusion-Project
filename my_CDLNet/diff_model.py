@@ -513,8 +513,8 @@ def main():
 
     immap = ImMAP(net)
     breakpoint()
-    immap1_out = immap.forward(kspace_masked, noise_level, mask, espirit_smaps[0], None, verbose=True)
-    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, espirit_smaps[0], None, verbose=True)
+    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
+    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None, verbose=True)
     
     # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)

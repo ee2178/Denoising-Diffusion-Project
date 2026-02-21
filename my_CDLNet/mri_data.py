@@ -3,28 +3,21 @@ import torch.nn.functional as F
 import numpy as np
 import os
 import h5py
+import math
 import argparse
 from utils import saveimg
-from mri_utils import walsh_smaps, fftc, ifftc
+from mri_utils import walsh_smaps, fftc, ifftc, espirit
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train", type=str, help="Run preprocessing over specified training set (provided path to image dir).", default=None)
 parser.add_argument("--val", type=str, help="Run preprocessing over specified validation set (provided path to image dir).", default=None)
 parser.add_argument("--test", type=str, help="Run preprocessing over specified test set (provided path to image dir).", default=None)
 parser.add_argument("--target", type=str, help="Store processed images in a new target directory.", default=None)
+parser.add_argument("--method", type=str, help="Choose smap estimation algorithm", default="espirit")
+
 ARGS = parser.parse_args()
 
 def crop_center_kspace(kspace, crop_size):
-    """
-    Crop the central region of k-space.
-
-    Args:
-        kspace: complex tensor of shape (B, C, H, W)
-        crop_size: int or (h, w)
-
-    Returns:
-        Cropped k-space of same shape, with zeros outside the central region.
-    """
     B, C, H, W = kspace.shape
     if isinstance(crop_size, int):
         crop_h = crop_w = crop_size
@@ -43,55 +36,105 @@ def crop_center_kspace(kspace, crop_size):
 def save_volume(kspace, image, smaps, dir, name, target_dir):
     # Save data as hdf5 format as a whole volume
     # Construct the dataset
-	# Need to reset indentations
     if dir.endswith('train'):
         split = 'train'
     elif dir.endswith('val'):
         split = 'val'
     elif dir.endswith('test'):
         split = 'test'
+    elif dir.endswith('test_v2'):
+        split = 'test'
     destination = os.path.join(target_dir, split, name)
     with h5py.File(destination, 'w') as f:
         # f.create_dataset('kspace', data=kspace.cpu().numpy())
-        f.create_dataset('image', data=image.cpu().numpy())
+        # f.create_dataset('image', data=image.cpu().numpy())
         f.create_dataset('smaps', data=smaps.cpu().numpy())
     return None
 
-def main(dirs, target_dir):
-	# Get device
+def main(dirs, target_dir, method, batch_size=4):
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
+
     for dir in dirs:
-        if dir: 
-            for name in os.listdir(dir):
-				# Only get T2 weighted brain 
-                if name.startswith('file_brain_AXT2'):
-					# Every file in these directories should be h5 files anyway
-                    with h5py.File(os.path.join(dir, name)) as hf:
-                        volume_kspace = hf['kspace'][()]
-                        # Convert to pytorch tensor (complex valued)
-                        volume_kspace = torch.from_numpy(volume_kspace)
-                        # Put on GPU
-                        volume_kspace = volume_kspace.to(device)
-                        # Get kspace centers
-                        # volume_kspace_centers = crop_center_kspace(volume_kspace, (640, 24))
+        if not dir:
+            continue
+
+        split = os.path.basename(os.path.normpath(dir))  # e.g. train / val / test
+
+        for name in os.listdir(dir):
+            if not name.startswith("file"):
+                continue
+
+            # ---- Construct destination path (must match save_volume logic)
+            out_dir = os.path.join(target_dir, split)
+            out_path = os.path.join(out_dir, name)
+
+            # ---- Skip if already processed
+            if os.path.exists(out_path):
+                print(f"Skipping {name} (already exists)")
+                continue
+
+            in_path = os.path.join(dir, name)
+
+            with h5py.File(in_path, "r") as hf:
+                volume_kspace = torch.from_numpy(hf["kspace"][()]).to(device, non_blocking=True)
+                assert volume_kspace.is_cuda
+
+                with torch.inference_mode():
+                    if method == "walsh":
                         volume_img = ifftc(volume_kspace)
                         smaps = walsh_smaps(volume_img)
-                        # Apply sensitivity maps and then sum
-                        volume_combined = torch.einsum('ijkl,ijkl->ikl', smaps.conj(), volume_img)
-                        # Save each slice individually
-                        save_volume(kspace = volume_kspace, image = volume_combined, smaps = smaps, dir = dir, name = name, target_dir = target_dir)
+                        smaps_cpu = smaps.detach().cpu()
+                        del volume_img, smaps
+
+                    elif method == "espirit":
+                        S = volume_kspace.shape[0]
+                        smaps_cpu_chunks = []
+
+                        for s0 in range(0, S, batch_size):
+                            s1 = min(S, s0 + batch_size)
+
+                            ks_batch = volume_kspace[s0:s1]
+
+                            sm_batch = espirit(
+                                ks_batch,
+                                acs_size=(24, 24),
+                                thresh_rowspace=0.2,
+                                thresh_eig=0.9,
+                            )
+                            sm_batch = torch.flip(sm_batch, dims=(-2, -1))
+
+                            smaps_cpu_chunks.append(sm_batch.detach().cpu())
+
+                            del ks_batch, sm_batch
+
+                        smaps_cpu = torch.cat(smaps_cpu_chunks, dim=0)
+                        del smaps_cpu_chunks
+
+                    else:
+                        raise ValueError(f"Unknown method: {method}")
+
+                save_volume(
+                    kspace=volume_kspace.detach().cpu(),
+                    image=None,
+                    smaps=smaps_cpu,
+                    dir=dir,
+                    name=name,
+                    target_dir=target_dir,
+                )
+
+                del volume_kspace, smaps_cpu
+
     return None
-
-
 
 if __name__ == "__main__":
     # Iterate through the directories specified
     # Grab a sample k-space volume shaped (n_slices, n_coils, height, width)
     dirs = [ARGS.train, ARGS.val, ARGS.test]
     target_dir = ARGS.target
+    method = ARGS.method
     print(dirs)
     print(target_dir)
-    main(dirs, target_dir)
+    main(dirs, target_dir, method)
         
     

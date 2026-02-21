@@ -4,10 +4,10 @@
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:h200:1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=48GB
-#SBATCH --time=15:00:00
-#SBATCH --job-name=fastMRI_Coil_Combination
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64GB
+#SBATCH --time=12:00:00
+#SBATCH --job-name=knee_fastMRI_espirit
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=logs/slurm_%j.out
@@ -23,4 +23,4 @@ conda activate env      # Replace with your actual env name
 # Navigate to the directory containing train.py
 cd ~/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet       # Replace with the actual path
 
-python3 mri_data.py --train /home/ee2178/scratch/ee2178/datasets/fastmri/brain/multicoil_train --val /home/ee2178/scratch/ee2178/datasets/fastmri/brain/multicoil_val --test /home/ee2178/scratch/ee2178/datasets/fastmri/brain/multicoil_test --target /home/ee2178/scratch/ee2178/datasets/fastmri_preprocessed/brain_T2W_coil_combined
+python3 mri_data.py --train /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_train --val /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_val --test /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_test_v2 --target /home/ee2178/scratch/ee2178/datasets/fastmri_preprocessed/knee_T2W_coil_combined
