@@ -13,8 +13,8 @@
         "acs_lines": 24
     },
     "paths": {
-        "ckpt": "trained_nets/LPDS_mixedimmap/net.ckpt",
-        "save": "trained_nets/LPDS_mixedimmap"
+        "ckpt": "trained_nets/brain/LPDS_ImMAP2p5/net.ckpt",
+        "save": "trained_nets/brain/LPDS_ImMAP2p5"
     },
     "train": {
         "fit": {

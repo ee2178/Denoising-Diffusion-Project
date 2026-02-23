@@ -475,7 +475,7 @@ def main():
     # Mask kspace
     kspace_masked = mask * kspace
     # Get noise level 
-    noise_level = 0.05
+    noise_level = 0.0
     
     gnd_truth = torch.from_numpy(gnd_truth).to(device)*2e3
     
@@ -499,27 +499,26 @@ def main():
     lpds_args = json.load(lpds_args_file)
     lpds_args_file.close()
 
-    # lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
+    lpdsnet, _, _, _ = train.init_model(lpds_args, device = device)
    
     # Load LPDSNet
     e2e_args_file = open("mri_config.json")
     e2e_args = json.load(e2e_args_file)
     e2e_args_file.close()
 
-    # lpdsnet_e2e, _, _, _ = train.init_model(lpds_args, device = device)
+    lpdsnet_e2e, _, _, _ = train.init_model(lpds_args, device = device)
 
     noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    # e2e_recon, _ = lpdsnet_e2e(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
+    e2e_recon, _ = lpdsnet_e2e(noisy_kspace[None], noise_level*255., mask = mask[None], smaps = smaps[None], mri = True)
 
     immap = ImMAP(net)
-    breakpoint()
-    immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
-    immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None, verbose=True)
+    # immap1_out = immap.forward(kspace_masked, noise_level, mask, smaps, None, verbose=True)
+    # immap2_out = immap.forward_2(kspace_masked, noise_level, mask, smaps, None, verbose=True)
     
     # immap2_5_out, prox_out, first_it = immap.forward_2p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True, mode=1)
     # immap2_5_out = immap.forward_3p5(kspace_masked, noise_level, mask, smaps, lpdsnet, save_dir = None, verbose = True)
 
-    # immap4_out = immap.forward_4(kspace_masked, noise_level, mask, espirit_smaps, lpdsnet, recon=e2e_recon, save_dir = None, verbose = True)
+    immap4_out = immap.forward_4(kspace_masked, noise_level, mask, espirit_smaps[0], lpdsnet, recon=e2e_recon, save_dir = None, verbose = True)
     
     # Generate brain mask 
     brain_mask = torch.norm(espirit_smaps[0], dim = 0) != 0
@@ -534,17 +533,17 @@ def main():
 
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
-    '''
+    
     psnr_4 = psnr(gnd_truth[brain_mask], immap4_out[0, 0, brain_mask])
     ssim_4 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap4_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP4 PSNR:{psnr_4}")
     print(f"ImMAP4 SSIM:{ssim_4}")
-    
+    '''
     psnr_ = psnr(gnd_truth[brain_mask], immap2_5_out[0, 0, brain_mask])
     ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_5_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2.5 PSNR:{psnr_}")
     print(f"ImMAP2.5 SSIM:{ssim_}")
-    '''
+    
     psnr_1 = psnr(gnd_truth[brain_mask], immap1_out[0, 0, brain_mask])
     ssim_1 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap1_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP1 PSNR:{psnr_1}")
@@ -553,6 +552,7 @@ def main():
     ssim_2 = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], immap2_out[:, :, min_x:max_x, min_y:max_y])
     print(f"ImMAP2 PSNR:{psnr_2}")
     print(f"ImMAP2 SSIM:{ssim_2}")
+    '''
     breakpoint()
 
 if __name__ == "__main__":

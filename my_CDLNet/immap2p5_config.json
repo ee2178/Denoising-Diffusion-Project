@@ -10,8 +10,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/LPDS_mixedimmap",
-	"ckpt": null
+	"save": "trained_nets/brain/LPDS_ImMAP2p5",
+	"ckpt": "trained_nets/brain/LPDS_ImMAP2p5/net.ckpt"
 },
 "train": {
 	"loaders": {

@@ -11,6 +11,24 @@ from train_utils import awgn
 from kspace_data import get_fit_loaders
 from mri_utils import mri_encoding, mri_decoding, make_acc_mask
 
+_mask_cache = {}
+
+def get_mask(kspace, R, acs_lines):
+    """
+    Returns a cached acceleration mask on the correct device.
+    Cache key is based on spatial shape, accel, ACS, and device.
+    """
+    Ny, Nx = kspace.shape[-2], kspace.shape[-1]
+    key = (Ny, Nx, R, acs_lines, kspace.device)
+
+    if key not in _mask_cache:
+        _mask_cache[key] = make_acc_mask(
+            shape=(Ny, Nx),
+            accel=R,
+            acs_lines=acs_lines
+        ).to(kspace.device, non_blocking=True)
+
+    return _mask_cache[key]
 
 def main(args):
     """ Given argument dictionary, load data, initialize model, and fit model.
@@ -53,7 +71,8 @@ def fit(net, opt, loaders,
         denoiser_args_path=None,
         R = 8, # MRI args
         acs_lines = 24,
-        backtrack_thresh = 1):
+        backtrack_thresh = 1,
+        log_every = 50):
     
     # Train the model
     print(f"fit: using device {device}")
@@ -68,10 +87,6 @@ def fit(net, opt, loaders,
     top_psnr = {"train": 0, "val": 0, "test": 0} # for backtracking
     epoch = start_epoch
     
-    # We are using a uniform mask, so do not have to make one every iteration
-    mask = make_acc_mask(shape = (kspace.shape[-2], kspace.shape[-1]), accel = R, acs_lines = acs_lines)
-    mask = mask.to(device)
-
     # start at the correct epoch, iterate up until number of epochs prescribed
     while epoch < start_epoch + epochs:
         # separate based on training phase
@@ -88,11 +103,16 @@ def fit(net, opt, loaders,
                 phase_nstd = noise_std
             psnr = 0
             t = tqdm(iter(loaders[phase]), desc=phase.upper()+'-E'+str(epoch), dynamic_ncols=True)
+            psnr_sum = 0.0        # float on CPU
+            mse_sum  = 0.0        # float on CPU
+            loss_sum = 0.0        # float on CPU
+
             for itern, batch in enumerate(t):
                 # Unpack batch
                 kspace, smaps, image = batch
                 # Send to device
                 kspace = kspace.to(device)
+                mask = get_mask(kspace, R, acs_lines)
                 smaps = smaps.to(device)
                 image = image.to(device)
                 # Generate a masked kspace sample
@@ -110,8 +130,10 @@ def fit(net, opt, loaders,
                         x_t, sig_t = awgn(image, image_noise_std, dist = noise_dist)
                         # We want to add some powerful noise to x_t and then parameterize noise as affine fcn of both sig_t and sig_y
                         img_recon, _ = net.forward_double_noise(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True, sigma_t = sig_t)
+                        loss = torch.mean(torch.pow(sig_t/255., -2)*torch.abs(image-img_recon)**2)
                     else:
                         img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, mri = True)
+                        loss = torch.mean((image - img_recon).abs() ** 2)
                     # supervised or unsupervised (MCSURE) loss during training
                     '''
                     if mcsure and phase == "train":
@@ -126,7 +148,6 @@ def fit(net, opt, loaders,
 
                     # if not mcsure then mse 
                     mse = torch.mean((image - img_recon).abs()**2)
-                    loss = torch.mean(torch.pow(sig_t/255., -2)*torch.abs(image-img_recon)**2)
                     if phase == 'train':
                         # Get gradients
                         loss.backward()
@@ -139,12 +160,32 @@ def fit(net, opt, loaders,
                         net.project()
                 # loss = loss.item()
 
-                if verbose:
-                    total_norm = grad_norm(net.parameters())
-                    t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
-                psnr = psnr - 10*torch.log10(mse)
-            psnr = psnr.item()
-            psnr = psnr/(itern+1)
+                # --- accumulate metrics on GPU (no sync) ---
+                # PSNR per-batch (tensor), accumulate as tensor to avoid CPU sync every iter
+                psnr_batch = -10.0 * torch.log10(mse)
+                # Keep running sums as GPU tensors to avoid .item() except when logging
+                if itern == 0:
+                    psnr_running = psnr_batch.detach()
+                    mse_running  = mse.detach()
+                    loss_running = loss.detach()
+                else:
+                    psnr_running = psnr_running + psnr_batch.detach()
+                    mse_running  = mse_running + mse.detach()
+                    loss_running = loss_running + loss.detach()
+
+                # --- LOG EVERY N iters (this is where we allow sync) ---
+                if verbose and ((itern + 1) % log_every == 0):
+                    # One sync point for 3 scalars (still a sync, but far less frequent)
+                    avg_loss = (loss_running / (itern + 1)).item()
+                    avg_psnr = (psnr_running / (itern + 1)).item()
+
+                    # grad norm is expensive + sync-y; only compute it when logging
+                    total_norm = grad_norm(net.parameters())  # make sure this returns a Python float
+
+                    t.set_postfix_str(f"loss={avg_loss:.3e}|psnr={avg_psnr:.2f}|gnorm={total_norm:.2e}", refresh=False)
+
+            # end epoch summary (single sync)
+            psnr = (psnr_running / (itern + 1)).item()
             print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
 
             if psnr > top_psnr[phase]:

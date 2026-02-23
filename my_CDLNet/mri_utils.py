@@ -136,6 +136,7 @@ def make_acc_mask(
     accel,
     acs_lines=24,
     dim=1,
+    device = 'cpu'
 ):
     """
     Uniform Cartesian subsampling mask with fully-sampled ACS.
@@ -147,7 +148,7 @@ def make_acc_mask(
     Ny, Nx = shape
     N = shape[dim]
     # Initialize empty mask
-    mask = torch.zeros((Ny, Nx), dtype=torch.float32)
+    mask = torch.zeros((Ny, Nx), dtype=torch.float32, device = device)
     # ACS region
     center = N // 2
     half_acs = acs_lines // 2
