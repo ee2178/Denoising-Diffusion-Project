@@ -80,6 +80,8 @@ def eval_immap( immap,      # ImMAP class
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
 
+    out = out * brain_mask # Apply the brain mask just to suppress background
+
     xp, yp = joint_normalize(gnd_truth.abs(), out[0,0].abs())
     psnr_ = psnr(xp[brain_mask], yp[brain_mask])
     ssim_ = ssim(xp[None, None, min_x:max_x, min_y:max_y], yp[None, None, min_x:max_x, min_y:max_y])
