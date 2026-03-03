@@ -29,7 +29,7 @@ def mri_awgn(x, acceleration_map, smaps, noise_std, kspace=False):
         sigma = noise_std[0] + \
                (noise_std[1] - noise_std[0])*torch.rand(1, device=x.device)
     x_coils_noisy = x_coils + sigma*torch.randn_like(x_coils)
-    y_coils = fftc(x_coils)
+    y_coils = fftc(x_coils_noisy)
     y_mask = y_coils * acceleration_map[None]
     # Always return masked kspace
     return y_mask, sigma
