@@ -43,8 +43,8 @@ class ComplexConvTranspose2d(nn.Module):
         self.output_padding = 1
 
         # Initialize two separate Conv2D transpose blocks, to operate an real and imag separately
-        self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, output_padding = self.output_padding, bias=False, dtype = torch.float64)
-        self.conv_imag = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, output_padding = self.output_padding, bias=False, dtype = torch.float64)
+        self.conv_real = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, output_padding = self.output_padding, bias=False)
+        self.conv_imag = nn.ConvTranspose2d(M, C, P, stride = stride, padding=self.padding, output_padding = self.output_padding, bias=False)
         
     def __call__(self, x):
         # Assume x is a complex valued input

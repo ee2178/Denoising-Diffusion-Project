@@ -8,12 +8,12 @@
         "s": 2
     },
     "paths": {
-        "ckpt": "trained_nets/LPDSNet/net.ckpt",
-        "save": "trained_nets/LPDSNet"
+        "ckpt": "trained_nets/brain/LPDSNet/net.ckpt",
+        "save": "trained_nets/brain/LPDSNet"
     },
     "train": {
         "fit": {
-            "backtrack_thresh": 2,
+            "backtrack_thresh": 5,
             "clip_grad": 0.05,
             "demosaic": false,
             "epochs": 1000,
@@ -28,8 +28,10 @@
             "verbose": true
         },
         "loaders": {
-            "batch_size": 10,
-            "crop_size": 256,
+            "batch_size": 32,
+            "brain": true,
+            "center_crop": 320,
+            "crop_size": 128,
             "end_slice": 8,
             "load_color": false,
             "num_workers": 14,
@@ -46,7 +48,7 @@
             ]
         },
         "opt": {
-            "lr": 0.001
+            "lr": 0.0005
         },
         "sched": {
             "gamma": 0.95,

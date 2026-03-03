@@ -4,29 +4,30 @@ from pprint import pprint
 import numpy as np
 import torch
 import torch.nn as nn
+import math
 
 from functools import partial
 from model import CDLNet, LPDSNet
 from train_utils import awgn
 from kspace_data import get_fit_loaders
-from mri_utils import mri_encoding, mri_decoding, make_acc_mask
+from mri_utils import mri_encoding, mri_decoding, make_acc_mask, mri_awgn
 
 _mask_cache = {}
 
-def get_mask(kspace, R, acs_lines):
+def get_mask(image, R, acs_lines):
     """
     Returns a cached acceleration mask on the correct device.
     Cache key is based on spatial shape, accel, ACS, and device.
     """
-    Ny, Nx = kspace.shape[-2], kspace.shape[-1]
-    key = (Ny, Nx, R, acs_lines, kspace.device)
+    Ny, Nx = image.shape[-2], image.shape[-1]
+    key = (Ny, Nx, R, acs_lines, image.device)
 
     if key not in _mask_cache:
         _mask_cache[key] = make_acc_mask(
             shape=(Ny, Nx),
             accel=R,
             acs_lines=acs_lines
-        ).to(kspace.device, non_blocking=True)
+        ).to(image.device, non_blocking=True)
 
     return _mask_cache[key]
 
@@ -103,91 +104,70 @@ def fit(net, opt, loaders,
                 phase_nstd = noise_std
             psnr = 0
             t = tqdm(iter(loaders[phase]), desc=phase.upper()+'-E'+str(epoch), dynamic_ncols=True)
-            psnr_sum = 0.0        # float on CPU
-            mse_sum  = 0.0        # float on CPU
-            loss_sum = 0.0        # float on CPU
+            log_every = 200  # try 50-200; if small (<10) you’ll tank perf
+
+            # running sums on GPU, allocated once
+            loss_sum = torch.zeros((), device=device)
+            mse_sum  = torch.zeros((), device=device)
 
             for itern, batch in enumerate(t):
-                # Unpack batch
-                kspace, smaps, image = batch
-                # Send to device
-                kspace = kspace.to(device)
-                mask = get_mask(kspace, R, acs_lines)
-                smaps = smaps.to(device)
-                image = image.to(device)
-                # Generate a masked kspace sample
-                kspace_masked = mask * kspace
+                _, smaps, image = batch
+                # kspace = kspace.to(device, non_blocking=True)
+                smaps  = smaps.to(device, non_blocking=True)
+                image  = image.to(device, non_blocking=True)
+
+                mask = get_mask(smaps, R, acs_lines)  # IMPORTANT: ensure this is already on GPU
+                # kspace_masked = mask * kspace
+
+                # kspace_masked_noisy, sigma_n = awgn(kspace_masked, phase_nstd)  # (also fixed your masked/noise mismatch)
                 
-                # Add noise to kspace_masked
-                kspace_masked_noisy, sigma_n = awgn(kspace, phase_nstd)
-                # Reset gradients
-                opt.zero_grad()
-
+                # When adding noise, we actually want to add noise in the multicoil image domain and then turn to kspace and mask
+                kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, phase_nstd)
+                opt.zero_grad(set_to_none=True)
+                sigma_n = torch.as_tensor(sigma_n, device=image.device, dtype=torch.float32)
                 with torch.set_grad_enabled(phase == 'train'):
-                    # Make predictions per batch
-                    if x_init:
-                        # If we want to initialize our model with some x_t, then we have to generate noisy image domain observation
-                        x_t, sig_t = awgn(image, image_noise_std, dist = noise_dist)
-                        # We want to add some powerful noise to x_t and then parameterize noise as affine fcn of both sig_t and sig_y
-                        img_recon, _ = net.forward_double_noise(kspace_masked_noisy, sigma_n, mask, smaps, x_init = x_t, mri = True, sigma_t = sig_t)
-                        loss = torch.mean(torch.pow(sig_t/255., -2)*torch.abs(image-img_recon)**2)
+                    if x_init is True:
+                        x_t, sig_t = awgn(image, image_noise_std, dist=noise_dist)
+                        img_recon, _ = net.forward_double_noise(
+                            kspace_masked_noisy[0], sigma_n, mask, smaps,
+                            x_init=x_t, mri=True, sigma_t=sig_t
+                        )
+                        loss = torch.mean(torch.pow(sig_t/255., -2) * (image - img_recon).abs()**2)
                     else:
-                        img_recon, _ = net(kspace_masked_noisy, sigma_n, mask, smaps, mri = True)
+                        img_recon, _ = net(kspace_masked_noisy[0], sigma_n, mask, smaps, mri=True)
                         loss = torch.mean((image - img_recon).abs() ** 2)
-                    # supervised or unsupervised (MCSURE) loss during training
-                    '''
-                    if mcsure and phase == "train":
-                        h = 1e-3
-                        # Implementation of mcsure loss
-                        b = torch.randn_like(obsrv_batch)
-                        batch_hat_b, _ = net(obsrv_batch.clone() + h*b, sigma_n, mask=mask)
-                        # assume you have a good estimator for sigma_n
-                        div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
-                        loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
-                    '''
 
-                    # if not mcsure then mse 
                     mse = torch.mean((image - img_recon).abs()**2)
+
                     if phase == 'train':
-                        # Get gradients
                         loss.backward()
-                        # Clip gradients
                         if clip_grad is not None:
                             nn.utils.clip_grad_norm_(net.parameters(), clip_grad)
-                        # Apply gradient update
                         opt.step()
-                        # method found in the CDLNet class, projects weights onto unit ball
                         net.project()
-                # loss = loss.item()
 
-                # --- accumulate metrics on GPU (no sync) ---
-                # PSNR per-batch (tensor), accumulate as tensor to avoid CPU sync every iter
-                psnr_batch = -10.0 * torch.log10(mse)
-                # Keep running sums as GPU tensors to avoid .item() except when logging
-                if itern == 0:
-                    psnr_running = psnr_batch.detach()
-                    mse_running  = mse.detach()
-                    loss_running = loss.detach()
-                else:
-                    psnr_running = psnr_running + psnr_batch.detach()
-                    mse_running  = mse_running + mse.detach()
-                    loss_running = loss_running + loss.detach()
+                # --- super cheap accumulation (in-place, no extra log10 kernels) ---
+                loss_sum.add_(loss.detach())
+                mse_sum.add_(mse.detach())
 
-                # --- LOG EVERY N iters (this is where we allow sync) ---
+                # --- log occasionally ---
                 if verbose and ((itern + 1) % log_every == 0):
-                    # One sync point for 3 scalars (still a sync, but far less frequent)
-                    avg_loss = (loss_running / (itern + 1)).item()
-                    avg_psnr = (psnr_running / (itern + 1)).item()
+                    avg_loss = (loss_sum / (itern + 1)).item()   # sync only here
+                    avg_mse  = (mse_sum  / (itern + 1)).item()
+                    avg_psnr = -10.0 * math.log10(avg_mse + 1e-12)  # compute PSNR on CPU
 
-                    # grad norm is expensive + sync-y; only compute it when logging
-                    total_norm = grad_norm(net.parameters())  # make sure this returns a Python float
+                    # grad_norm is expensive; keep it in the log block (or remove it entirely)
+                    total_norm = grad_norm(net.parameters())
 
-                    t.set_postfix_str(f"loss={avg_loss:.3e}|psnr={avg_psnr:.2f}|gnorm={total_norm:.2e}", refresh=False)
+                    t.set_postfix_str(
+                        f"loss={avg_loss:.3e}|psnr={avg_psnr:.2f}|gnorm={total_norm:.2e}",
+                        refresh=False
+                    )
 
-            # end epoch summary (single sync)
-            psnr = (psnr_running / (itern + 1)).item()
-            print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
-
+            # epoch summary
+            avg_mse  = (mse_sum  / (itern + 1)).item()
+            avg_psnr = -10.0 * math.log10(avg_mse + 1e-12)
+            print(f"{phase.upper()} PSNR: {avg_psnr:.3f} dB")
             if psnr > top_psnr[phase]:
                 top_psnr[phase] = psnr
             # backtracking check

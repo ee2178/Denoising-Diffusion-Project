@@ -75,15 +75,22 @@ class MRIDataset(data.Dataset):
             # Don't bother with transformations on volumes
             return image, smaps, slice, self.image_paths[idx]
 
-def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False, num_workers = 1):
+def get_data_loader(dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8, scaling_fac = 1e6, get_smaps = False, num_workers = 1, brain = True, center_crop = 320):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
     else:
-        xfm = transforms.Compose([transforms.RandomCrop(crop_size),
-                                  transforms.RandomHorizontalFlip(),
-                                  transforms.RandomVerticalFlip(),
-                                  ])
+        if brain:
+            xfm = transforms.Compose([transforms.CenterCrop(center_crop),
+                                    transforms.RandomCrop(crop_size),
+                                    transforms.RandomHorizontalFlip(),
+                                    transforms.RandomVerticalFlip(),
+                                    ])
+        else:
+            xfm = transforms.Compose([transforms.RandomCrop(crop_size),
+                                    transforms.RandomHorizontalFlip(),
+                                    transforms.RandomVerticalFlip(),
+                                    ])
         # xfm = None
 
     return data.DataLoader(MRIDataset(dir_list, xfm, load_color, start_slice = start_slice, end_slice = end_slice, scaling_fac = scaling_fac, get_smaps = get_smaps, num_workers = num_workers),
@@ -100,7 +107,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                   start_slice = 0, 
                   end_slice = 8,
                   scaling_fac = 1e6, 
-                  num_workers = 1):
+                  num_workers = 1,
+                  brain=True,
+                  center_crop = 320):
 
     if type(batch_size) is int:
         batch_size = [batch_size, 1, 1]
@@ -113,7 +122,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
                                           scaling_fac = scaling_fac,
-                                          num_workers = num_workers),
+                                          num_workers = num_workers,
+                                          brain = brain,
+                                          center_crop = center_crop),
                    'val':   get_data_loader(val_path_list, 
                                           batch_size[1], 
                                           load_color, 
@@ -121,7 +132,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
                                           scaling_fac = scaling_fac,
-                                          num_workers = num_workers),
+                                          num_workers = num_workers,
+                                          brain = brain,
+                                          center_crop = center_crop),
                    'test':  get_data_loader(tst_path_list, 
                                           batch_size[2], 
                                           load_color, 
@@ -129,5 +142,7 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                           start_slice = start_slice, 
                                           end_slice = end_slice,
                                           scaling_fac = scaling_fac,
-                                          num_workers = num_workers)}
+                                          num_workers = num_workers,
+                                          brain = brain,
+                                          center_crop = center_crop)}
     return dataloaders

@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --account=torch_pr_89_tandon_advanced
+#SBATCH --account=torch_pr_89_general
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=h200
+#SBATCH --constraint=l40s
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64GB
 #SBATCH --time=48:00:00
-#SBATCH --job-name=LPDSNet-FastMRI-MRI-Reconstruction-IMMAP2p5
+#SBATCH --job-name=LPDSNet-FastMRI-MRI-Reconstruction
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=logs/slurm_%j.out

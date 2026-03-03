@@ -10,8 +10,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/brain/LPDS_MRI_Recon",
-	"ckpt": "trained_nets/brain/LPDS_MRI_Recon/net.ckpt"
+	"save": "trained_nets/brain/LPDS_MRI_Recon_Acc10",
+	"ckpt": "trained_nets/brain/LPDS_MRI_Recon_Acc6/net.ckpt"
 },
 "train": {
 	"loaders": {
@@ -32,17 +32,17 @@
 		"image_noise_std": [0, 126],
         "val_freq": 50,
 		"save_freq": 5,
-		"backtrack_thresh": 2,
+		"backtrack_thresh": 5,
 		"verbose": true,
 		"clip_grad": 5e-2,
 		"demosaic": false,
 		"mcsure": false,
-        "x_init":true,
-        "noise_dist": "log",
+        "x_init":false,
+        "noise_dist": "uniform",
 	    "denoiser_args_path":"eval_config.json"
     },
 	"opt": {
-		"lr": 1e-3
+		"lr": 5e-4
 	},
 	"sched": {
 		"gamma": 0.95,
@@ -50,7 +50,7 @@
 	}
 },
 "mri":{
-    "R": 8,
+    "R": 10,
     "acs_lines" : 24
 }
 }

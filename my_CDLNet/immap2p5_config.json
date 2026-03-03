@@ -10,8 +10,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/brain/LPDS_ImMAP2p5",
-	"ckpt": "trained_nets/brain/LPDS_ImMAP2p5/net.ckpt"
+	"save": "trained_nets/brain/LPDS_ImMAP2p5_R6",
+	"ckpt": "trained_nets/brain/LPDS_ImMAP2p5_R6/net.ckpt"
 },
 "train": {
 	"loaders": {
@@ -32,7 +32,7 @@
 		"image_noise_std": [0, 126],
         "val_freq": 50,
 		"save_freq": 5,
-		"backtrack_thresh": 2,
+		"backtrack_thresh": 5,
 		"verbose": true,
 		"clip_grad": 5e-2,
 		"demosaic": false,
@@ -42,7 +42,7 @@
 	    "denoiser_args_path":"eval_config.json"
     },
 	"opt": {
-		"lr": 1e-3
+		"lr": 5e-4
 	},
 	"sched": {
 		"gamma": 0.95,
@@ -50,7 +50,7 @@
 	}
 },
 "mri":{
-    "R": 6,
+    "R": 10,
     "acs_lines" : 24
 }
 }

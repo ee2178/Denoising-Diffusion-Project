@@ -15,6 +15,18 @@ def dft_matrix(N):
     W = torch.complex(torch.zeros_like(W), -2*torch.Tensor([math.pi])*W/N)
     return torch.exp(W)
 
+def mri_awgn(x, acceleration_map, smaps, noise_std):
+    x_coils = smaps[:, :]* x[None, :, :]
+    if not isinstance(noise_std, (list, tuple)):
+        sigma = noise_std
+    elif isinstance(noise_std, (list, tuple)): # uniform sampling of sigma
+        sigma = noise_std[0] + \
+               (noise_std[1] - noise_std[0])*torch.rand(1, device=x.device)
+    x_coils_noisy = x_coils + sigma*torch.randn_like(x_coils)
+    y_coils = fftc(x_coils)
+    y_mask = y_coils * acceleration_map[None]
+    return y_mask, sigma
+
 def mri_encoding(x, acceleration_map, smaps):
     # We take an acceleration_map to be a row-removed identity matrix corresponding to how many lines in kspace we keep [N x N]
     # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]

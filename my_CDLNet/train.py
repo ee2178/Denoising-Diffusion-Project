@@ -44,7 +44,7 @@ def fit(net, opt, loaders,
         epoch_fun = None, 
         mcsure = False,
         noise_dist = 'uniform',
-        backtrack_thresh = 1):
+        backtrack_thresh = 5):
     
     # Train the model
     print(f"fit: using device {device}")
@@ -86,7 +86,6 @@ def fit(net, opt, loaders,
                 obsrv_batch = mask * noisy_batch
                 # Reset gradients
                 opt.zero_grad()
-
                 with torch.set_grad_enabled(phase == 'train'):
                     # Make predictions per batch
                     batch_hat, _ = net(obsrv_batch, sigma_n, mask=mask)
@@ -104,7 +103,7 @@ def fit(net, opt, loaders,
                         # SCALE THE LOSS ACCORDING TO THE NOISE!!
                         mse = torch.mean(torch.abs(batch - batch_hat)**2)
                         # VERY IMPORTANT TO CUT SCALING DOWN TO [0, 1]
-                        loss = torch.mean(torch.pow(sigma_n/255., -2)*torch.abs(batch - batch_hat)**2)
+                        loss = torch.mean((sigma_n/255.+1e-3)**(-2)*torch.abs(batch - batch_hat)**2)
                         
                     if phase == 'train':
                         # Get gradients
