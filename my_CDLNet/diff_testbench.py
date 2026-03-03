@@ -157,7 +157,7 @@ def main():
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
     
     kspace, volume_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
-
+    breakpoint()
     # Load networks
     net = load_model('eval_config.json', device = device)
     net_immap2p5 = load_model('immap2p5_config.json', device = device)
