@@ -141,8 +141,8 @@ def prep_data(  kspace_fname,       # Path to kspace
     volume_kspace = volume_kspace.to(device)
 
     espirit_smaps = torch.flip(espirit(mask*kspace[None], acs_size=(24, 24)), dims = (-2, -1))[0]
-    gnd_truth = (espirit_smaps.conj() * kspace).sum(dim=0)
-
+    gnd_truth = (espirit_smaps.conj() * ifftc(kspace)).sum(dim=0)
+    
     brain_mask = torch.norm(espirit_smaps, dim = 0) != 0
 
     return kspace, volume_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask
