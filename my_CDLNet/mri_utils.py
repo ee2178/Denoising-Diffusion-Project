@@ -15,8 +15,14 @@ def dft_matrix(N):
     W = torch.complex(torch.zeros_like(W), -2*torch.Tensor([math.pi])*W/N)
     return torch.exp(W)
 
-def mri_awgn(x, acceleration_map, smaps, noise_std):
-    x_coils = smaps[:, :]* x[None, :, :]
+def mri_awgn(x, acceleration_map, smaps, noise_std, kspace=False):
+    if kspace is False:
+        # Takes in a noise free ground truth, not kspace
+        x_coils = smaps[:, :]* x[None, :, :]
+    if kspace is True:
+        # Assume we take in a fully sampled kspace 
+        y = ifftc(x)
+        x_coils = smaps[:, :]* y[None, :, :]
     if not isinstance(noise_std, (list, tuple)):
         sigma = noise_std
     elif isinstance(noise_std, (list, tuple)): # uniform sampling of sigma
@@ -25,6 +31,7 @@ def mri_awgn(x, acceleration_map, smaps, noise_std):
     x_coils_noisy = x_coils + sigma*torch.randn_like(x_coils)
     y_coils = fftc(x_coils)
     y_mask = y_coils * acceleration_map[None]
+    # Always return masked kspace
     return y_mask, sigma
 
 def mri_encoding(x, acceleration_map, smaps):
