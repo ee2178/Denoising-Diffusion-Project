@@ -16,7 +16,7 @@ from pprint import pprint
 from functools import partial
 from utils import saveimg
 from model_utils import uball_project
-from metrics import psnr, ssim
+from metrics import joint_normalize, psnr, ssim
 from immap import ImMAP
 
 def eval_immap( immap,      # ImMAP class
@@ -80,8 +80,9 @@ def eval_immap( immap,      # ImMAP class
     max_y = torch.max(nnzs[:, 1])
     min_y = torch.min(nnzs[:, 1])
 
-    psnr_ = psnr(gnd_truth[brain_mask], out[0, 0, brain_mask])
-    ssim_ = ssim(gnd_truth[None, None, min_x:max_x, min_y:max_y], out[:, :, min_x:max_x, min_y:max_y])
+    xp, yp = joint_normalize(gnd_truth.abs(), out[0,0].abs())
+    psnr_ = psnr(xp[brain_mask], yp[brain_mask])
+    ssim_ = ssim(xp[None, None, min_x:max_x, min_y:max_y], yp[None, None, min_x:max_x, min_y:max_y])
     print(f"ImMAP{mode} PSNR:{psnr_}")
     print(f"ImMAP{mode} SSIM:{ssim_}")
 
@@ -175,7 +176,7 @@ def main():
     immap = ImMAP(net)
    
     # Generate brain mask 
-    modes = [2]
+    modes = [1, 2, 2.5, 4]
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 

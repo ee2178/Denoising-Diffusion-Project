@@ -11,6 +11,16 @@ import h5py
 from pprint import pprint
 from mri_utils import make_acc_mask
 
+def joint_normalize(x, y):
+    # Let's perform a normalization of two images based on their joint statistics
+    # Assume x and y are same shape and magnitude images 
+    xy = torch.cat((x, y), dim = 0)
+    min_xy = xy.min()
+    max_xy = xy.max()
+    xp = (x-min_xy)/(max_xy-min_xy)
+    yp = (y-min_xy)/(max_xy-min_xy)
+
+    return xp, yp
 
 def psnr(x, y):
     mse = torch.mean((x-y).abs()**2)
