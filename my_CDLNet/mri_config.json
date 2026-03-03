@@ -10,7 +10,7 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/brain/LPDS_MRI_Recon_Acc10",
+	"save": "trained_nets/brain/LPDS_MRI_Recon_Acc6",
 	"ckpt": "trained_nets/brain/LPDS_MRI_Recon_Acc6/net.ckpt"
 },
 "train": {
