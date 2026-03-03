@@ -46,12 +46,12 @@ def eval_immap( immap,      # ImMAP class
         )
     elif mode == 2:
         out = immap.forward_2(
-            kspace_masked[0], noise_level, mask, smaps,
+            kspace_masked, noise_level, mask, smaps,
             None, verbose=True
         )
     elif mode == 2.5:
         out, _, _ = immap.forward_2p5(
-            kspace_masked[0], noise_level, mask, smaps,
+            kspace_masked, noise_level, mask, smaps,
             lpdsnet, save_dir=None, verbose=True, mode=1
         )
     elif mode == 3.5:
@@ -61,7 +61,7 @@ def eval_immap( immap,      # ImMAP class
         )
     elif mode == 4:
         out = immap.forward_4(
-            kspace_masked[0], noise_level, mask,
+            kspace_masked, noise_level, mask,
             smaps,
             lpdsnet,
             recon=init_recon,
@@ -166,7 +166,7 @@ def main():
     # Perform an e2e recon via LPDSNet for warm start
     # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
     # Add noise in multicoil image space
-    noise_level = 0.05
+    noise_level = 0.01
     # noisy_kspace, _ = mri_awgn(kspace, mask, espirit_smaps, noise_level, kspace=True)
     noisy_kspace, _ = mri_awgn(gnd_truth, mask, espirit_smaps, noise_level)
     e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level*255., mask = mask[None], smaps = espirit_smaps[None], mri = True)
