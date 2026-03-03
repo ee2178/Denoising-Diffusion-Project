@@ -176,7 +176,7 @@ def main():
 
     # Init ImMAP class
     # We may want to try a bunch of different lambda values:
-    immap = ImMAP(net, lam = 100)
+    immap = ImMAP(net, lam = 10**(1/2))
     noise_level = 0.01
     # Generate brain mask 
     modes = [2]
