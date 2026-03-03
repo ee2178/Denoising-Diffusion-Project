@@ -175,10 +175,11 @@ def main():
     e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level*255., mask = mask[None], smaps = espirit_smaps[None], mri = True)
 
     # Init ImMAP class
-    immap = ImMAP(net)
+    # We may want to try a bunch of different lambda values:
+    immap = ImMAP(net, lam = 10)
    
     # Generate brain mask 
-    modes = [1, 2, 2.5, 4]
+    modes = [2]
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
