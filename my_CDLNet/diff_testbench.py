@@ -117,16 +117,16 @@ def prep_data(  kspace_fname,       # Path to kspace
     with h5py.File(smaps_fname) as f:
         smaps = f['smaps'][:, :, :, :]
         smaps = smaps[slice, :, :, :]
-        gnd_truth = f['image'][slice, :, :]
+        # gnd_truth = f['image'][slice, :, :]
 
     with h5py.File(kspace_fname) as f:
-        kspace = f['kspace'][slice, :, :, :]
+        kspace = f['kspace'][slice, :, :, :]*scale_fac
         volume_kspace = f['kspace'][()]
     kspace = torch.from_numpy(kspace)
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
 
-    mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 8, acs_lines = 24)
+    mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = accel, acs_lines = acs)
 
     # Send to GPU
     smaps = smaps.to(device)
