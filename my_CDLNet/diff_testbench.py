@@ -174,7 +174,7 @@ def main():
     immap = ImMAP(net)
    
     # Generate brain mask 
-    modes = [2, 2.5, 4]
+    modes = [2]
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
