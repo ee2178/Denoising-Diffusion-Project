@@ -167,7 +167,8 @@ def main():
     # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
     # Add noise in multicoil image space
     noise_level = 0.05
-    noisy_kspace, _ = mri_awgn(kspace, mask, espirit_smaps, noise_level, kspace=True)
+    # noisy_kspace, _ = mri_awgn(kspace, mask, espirit_smaps, noise_level, kspace=True)
+    noisy_kspace, _ = mri_awgn(gnd_truth, mask, espirit_smaps, noise_level)
     e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level*255., mask = mask[None], smaps = espirit_smaps[None], mri = True)
 
     # Init ImMAP class
