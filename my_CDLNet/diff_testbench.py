@@ -122,7 +122,7 @@ def prep_data(  kspace_fname,       # Path to kspace
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
         volume_kspace = f['kspace'][()]
-    kspace = torch.from_numpy(kspace)
+    kspace = torch.from_numpy(kspace)*scale_fac
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
 
