@@ -122,7 +122,7 @@ def prep_data(  kspace_fname,       # Path to kspace
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
         volume_kspace = f['kspace'][()]
-    kspace = torch.from_numpy(kspace)*scale_fac
+    kspace = torch.from_numpy(kspace)
     smaps = torch.from_numpy(smaps)
     smaps = torch.squeeze(smaps)
 
@@ -177,7 +177,7 @@ def main():
     modes = [2, 2.5, 4]
     immap_outs = []
     for mode in modes:
-        immap_outs.append(eval_immap(immap, noisy_kspace, smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
+        immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
 
     breakpoint()
 
