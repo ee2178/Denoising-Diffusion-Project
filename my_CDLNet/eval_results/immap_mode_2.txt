@@ -1,0 +1,6 @@
+NRMSE: 0.05367696285247803
+PSNR: 25.471227645874023 
+SSIM: tensor([0.7947], device='cuda:0') 
+LPIPS: tensor([[[[0.1583]]]], device='cuda:0') 
+latency: 14.846848642528057 
+Diverged: 0

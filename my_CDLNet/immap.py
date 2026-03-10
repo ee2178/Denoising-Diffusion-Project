@@ -385,14 +385,13 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         self.beta=0.05
         return x_t
-    def forward_4(self, y, noise_level, acceleration_map, smaps, e2e_net, recon=None, save_dir = None, verbose = True):
+    def forward_4(self, y, noise_level, acceleration_map, smaps, e2e_net, recon=None, save_dir = None, verbose = True, sigma_T=0.1):
         # In immap4, we take in a given reconstruction, add noise, and then proceed. 
         x_t, t, _, _, y = self.init_diff(y, noise_level)
         sigma_y = noise_level
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
         # Bring up to a reasonable noise level 
-        sigma_T = 0.1
         EHy = EH(y)
         if recon is None:
             recon = EHy[None, None]

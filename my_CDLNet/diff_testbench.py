@@ -162,9 +162,9 @@ def main():
     kspace, volume_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
     saveimg(gnd_truth, "gndtruth.png", contrast=True)
     # Load networks
-    net = load_model('eval_config.json', device = device)
-    net_immap2p5 = load_model('immap2p5_config.json', device = device)
-    lpdsnet_e2e = load_model('mri_config.json', device = device)
+    net = load_model('configs/eval_config.json', device = device)
+    net_immap2p5 = load_model('configs/immap2p5_config.json', device = device)
+    lpdsnet_e2e = load_model('configs/mri_config.json', device = device)
 
     # Perform an e2e recon via LPDSNet for warm start
     # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
@@ -176,15 +176,13 @@ def main():
 
     # Init ImMAP class
     # We may want to try a bunch of different lambda values:
-    immap = ImMAP(net, lam = 10**(1/2))
+    immap = ImMAP(net, lam = 10**(3/2))
     noise_level = 0.01
     # Generate brain mask 
     modes = [2]
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
-
-    breakpoint()
 
 if __name__ == "__main__":
     main()

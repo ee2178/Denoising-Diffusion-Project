@@ -7,6 +7,7 @@ import train
 import json
 import os
 import h5py
+import lpips
 
 from pprint import pprint
 from mri_utils import make_acc_mask
@@ -14,6 +15,8 @@ from mri_utils import make_acc_mask
 def joint_normalize(x, y):
     # Let's perform a normalization of two images based on their joint statistics
     # Assume x and y are same shape and magnitude images 
+    x = x.squeeze()
+    y = y.squeeze()
     xy = torch.cat((x, y), dim = 0)
     min_xy = xy.min()
     max_xy = xy.max()
@@ -22,13 +25,32 @@ def joint_normalize(x, y):
 
     return xp, yp
 
+def lpips_alex(x, y, loss_fn):
+    # We need to renormalize our images and then i guess turn them into 3 channel things
+    # We can cheat a little bit, let's assume inputs are [0, 1] grayscale. Then, let's just do -0.5 * 2
+    xp = (x - 0.5)*2
+    yp = (y - 0.5)*2
+
+    xp = xp.expand(-1, 3, -1, -1)
+    yp = yp.expand(-1, 3, -1, -1)
+
+    #Compute loss
+    with torch.no_grad():
+        loss = loss_fn(xp, yp)
+    return loss
+
+
 def psnr(x, y):
     mse = torch.mean((x-y).abs()**2)
     return -10*torch.log10(mse)
 
 def nrmse(x, y):
     rmse = torch.sqrt(torch.mean((x-y).abs()**2))
-    dyn_range = torch.max(x.abs()) - torch.min(x.abs())
+    # Be careful here, we should probably use the max and min across x and y
+    xy = torch.cat((x, y), dim = 0)
+    min_xy = xy.min()
+    max_xy = xy.max()
+    dyn_range = torch.max(max_xy - min_xy)
     return rmse/dyn_range
 
 # Gaussian window
