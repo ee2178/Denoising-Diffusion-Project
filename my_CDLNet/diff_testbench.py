@@ -181,7 +181,7 @@ def main():
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
     
-    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
+    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 10, device = device)
     saveimg(gnd_truth, "gndtruth.png", contrast=True)
     # Load networks
     net = load_model('configs/eval_config.json', device = device)
@@ -204,8 +204,8 @@ def main():
     immap = ImMAP(net, lam = 10)
     dds = DDS(net)
     # Generate brain mask 
-    # modes = ['2', '2.5', '2.5-WS', 'DDS']
-    modes = ['DDS']
+    modes = ['2', '2.5', '2.5-WS', 'DDS']
+    # modes = ['DDS']
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 

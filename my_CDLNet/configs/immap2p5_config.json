@@ -10,7 +10,7 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/brain/LPDS_ImMAP2p5_R10",
+	"save": "trained_nets/brain/LPDS_ImMAP2p5_R6",
 	"ckpt": "trained_nets/brain/LPDS_ImMAP2p5_R10/net.ckpt"
 },
 "train": {
