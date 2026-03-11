@@ -1,11 +1,11 @@
 """
 PyTorch translation of Julia noise-level estimation and multi-coil whitening utilities.
 
-Tensor layout convention (matching the original Julia code):
-    (H, W, C, B)  —  spatial height, spatial width, coils/channels, batch
+Tensor layout convention: standard PyTorch  (B, C, H, W)
+    B – batch, C – coils/channels, H – height, W – width
 
 CDF 9/7 wavelet coefficients are used as a default high-pass filter for
-noise estimation (same as NNlib default in the Julia original).
+noise estimation.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from typing import Optional, Union, List, Tuple
-
+from typing import Optional, Union, List
 
 # ---------------------------------------------------------------------------
 # CDF 9/7 high-pass wavelet filter
@@ -39,8 +38,9 @@ cdf97 = torch.tensor(
 # ---------------------------------------------------------------------------
 
 def _real_dtype(x: Tensor) -> torch.dtype:
-    """Return the underlying real dtype of x (handles complex tensors)."""
-    return x.real.dtype if x.is_complex() else x.dtype
+    if x.is_complex():
+        return torch.float32 if x.dtype == torch.complex64 else torch.float64
+    return x.dtype
 
 
 def _eps(x: Tensor) -> float:
@@ -48,120 +48,93 @@ def _eps(x: Tensor) -> float:
 
 
 def _default_filter(x: Tensor) -> Tensor:
-    """Return cdf97 cast to the real dtype of x and on the same device."""
     return cdf97.to(device=x.device, dtype=_real_dtype(x))
 
 
 def _separable_conv(x: Tensor, f: Tensor) -> Tensor:
     """
-    Apply a separable 2-D convolution (along H then W) with 1-D filter *f*.
+    Depthwise separable 2-D convolution with 1-D filter f.
 
     Parameters
     ----------
-    x : (H, W, C, B)  – real or complex
-    f : (k,)           – real 1-D filter
+    x : (B, C, H, W) – real or complex
+    f : (k,)
 
     Returns
     -------
     Tensor, same shape as x.
-
-    Notes
-    -----
-    Implemented as two depthwise 1-D convolutions so that each (channel, batch)
-    slice is filtered independently, matching Julia's NNlib.conv behaviour.
-    "Same" padding is used to preserve spatial dimensions.
     """
-    H, W, C, B = x.shape
+    B, C, H, W = x.shape
     k   = f.shape[0]
     pad = k // 2
 
-    # ---- reshape to (1, B*C, H, W) for grouped / depthwise conv2d ----------
-    x_pt = x.permute(3, 2, 0, 1).reshape(1, B * C, H, W)   # (1, B*C, H, W)
+    # Merge batch+channel for grouped depthwise conv
+    x_pt = x.reshape(1, B * C, H, W)
 
-    f_ = f.to(dtype=_real_dtype(x_pt))
+    f_ = f.to(dtype=_real_dtype(x))
     fh = f_.reshape(1, 1, k, 1).expand(B * C, 1, k, 1).contiguous()
     fw = f_.reshape(1, 1, 1, k).expand(B * C, 1, 1, k).contiguous()
 
     def _conv_real(t: Tensor) -> Tensor:
         t = F.conv2d(t, fh, padding=(pad, 0), groups=B * C)
         t = F.conv2d(t, fw, padding=(0, pad), groups=B * C)
-        return t[..., :H, :W]          # trim any extra samples from odd padding
+        return t[..., :H, :W]
 
-    if x_pt.is_complex():
+    if x.is_complex():
         out = torch.complex(_conv_real(x_pt.real), _conv_real(x_pt.imag))
     else:
         out = _conv_real(x_pt)
 
-    return out.reshape(B, C, H, W).permute(2, 3, 1, 0)      # (H, W, C, B)
+    return out.reshape(B, C, H, W)
 
 
 def _mul_channel(M: Tensor, t: Tensor) -> Tensor:
     """
-    Apply a batched (C×C) matrix to the channel dimension of *t*.
-
-    Equivalent to Julia's ``mul_channel(M, t)`` / the ⊠ batched_adjoint pattern.
+    Apply a per-batch (C x C) matrix to the channel dimension of t.
 
     Parameters
     ----------
-    M : (C, C, B)
-    t : (H, W, C, B)
+    M : (B, C, C)
+    t : (B, C, H, W)
 
     Returns
     -------
-    Tensor, shape (H, W, C, B)
+    Tensor, shape (B, C, H, W)
     """
-    H, W, C, B = t.shape
-    M_b = M.permute(2, 0, 1)                    # (B, C, C)
-    t_b = t.permute(3, 2, 0, 1).reshape(B, C, H * W)  # (B, C, H*W)
-    out = torch.bmm(M_b, t_b)                   # (B, C, H*W)
-    return out.reshape(B, C, H, W).permute(2, 3, 1, 0)   # (H, W, C, B)
-
-
-def _batched_adjoint(M: Tensor) -> Tensor:
-    """
-    Conjugate-transpose the first two dimensions of a (C, C, B) tensor,
-    mirroring Julia's ``NNlib.batched_adjoint``.
-    """
-    return M.conj().permute(1, 0, 2)
+    B, C, H, W = t.shape
+    t_flat = t.reshape(B, C, H * W)          # (B, C, H*W)
+    out    = torch.bmm(M, t_flat)            # (B, C, H*W)
+    return out.reshape(B, C, H, W)
 
 
 # ---------------------------------------------------------------------------
-# Noise-Level Estimation  (MAD)
+# Noise-Level Estimation (MAD)
 # ---------------------------------------------------------------------------
 
-def nle_mad(
-    x: Tensor,
-    f: Optional[Tensor] = None,
-) -> Tensor:
+def nle_mad(x: Tensor, f: Optional[Tensor] = None) -> Tensor:
     """
     Median Absolute Deviation noise-level estimator.
 
     Parameters
     ----------
-    x : Tensor, shape (H, W, C, B) – real **or** complex multicoil signal.
-    f : Tensor, optional
-        1-D high-pass filter.  Defaults to the CDF 9/7 filter ``cdf97``.
+    x : (B, C, H, W) – real or complex multicoil signal
+    f : 1-D filter, defaults to cdf97
 
     Returns
     -------
-    Tensor  – scalar estimate of the noise standard deviation.
-
-    Notes
-    -----
-    For complex input the real and imaginary parts are stacked along the
-    channel axis and the result is scaled by √2, giving the std-dev of a
-    circularly-symmetric complex normal distribution (matching the Julia
-    ``Complex`` method).
+    Scalar Tensor – estimated noise standard deviation.
+    For complex input, returns the std-dev of a circularly-symmetric
+    complex normal (scaled by sqrt(2)).
     """
     if f is None:
         f = _default_filter(x)
 
     if x.is_complex():
-        y = torch.cat([x.real, x.imag], dim=2)   # (H, W, 2C, B)
+        y = torch.cat([x.real, x.imag], dim=1)   # (B, 2C, H, W)
         return nle_mad(y, f) * (2.0 ** 0.5)
 
     z = _separable_conv(x, f)
-    # Divide by 2: the 1-D filter is applied twice (H and W directions)
+    # Divide by 2: 1-D filter applied twice (H and W)
     return torch.median(z.abs()) / (2.0 * 0.6745)
 
 
@@ -169,48 +142,38 @@ def nle_mad(
 # Noise Covariance Estimation
 # ---------------------------------------------------------------------------
 
-def ncov_est(
-    x: Tensor,
-    f: Optional[Tensor] = None,
-) -> Tensor:
+def ncov_est(x: Tensor, f: Optional[Tensor] = None) -> Tensor:
     """
     Estimate the inter-channel noise covariance matrix.
 
     Parameters
     ----------
-    x : Tensor, shape (H, W, C, B)
-    f : Tensor, optional – 1-D filter (default: ``cdf97``).
+    x : (B, C, H, W)
+    f : 1-D filter, defaults to cdf97
 
     Returns
     -------
-    Tensor, shape (C, C, B)
+    Tensor, shape (B, C, C)
     """
     if f is None:
         f = _default_filter(x)
 
-    H, W, C, B = x.shape
+    B, C, H, W = x.shape
 
-    # Filter every (channel × batch) slice independently
-    xr  = x.reshape(H, W, 1, C * B)
-    zr  = _separable_conv(xr, f) / 2.0      # (H, W, 1, C*B)
+    # Filter each channel independently via depthwise conv
+    z = _separable_conv(x, f) / 2.0          # (B, C, H, W)
 
-    Z   = zr.reshape(-1, C, B)              # (N, C, B),  N = H*W
-    N   = Z.shape[0]
-    Z   = Z.permute(1, 0, 2)               # (C, N, B)
+    # Flatten spatial dims: Z[b, c, n] = filtered pixel n of coil c in batch b
+    Z = z.reshape(B, C, H * W)               # (B, C, N)
 
-    mu  = Z.mean(dim=1, keepdim=True)       # (C, 1, B)
-    Zmu = (Z - mu).permute(2, 0, 1).reshape(N * B, C, 1)   # (N*B, C, 1)
+    # Sigma[b] = Z[b] @ Z[b]^H / N_mask      shape (B, C, C)
+    Sigma = torch.bmm(Z, Z.conj().transpose(-2, -1))   # (B, C, C)
 
-    # Accumulate outer products: Σ_n  zμ · zμᴴ
-    Sigma = torch.bmm(Zmu, Zmu.conj().transpose(-2, -1))    # (N*B, C, C)
-    Sigma = Sigma.reshape(N, B, C, C).sum(dim=0)            # (B, C, C)
+    # Normalise by number of non-zero pixels per batch element
+    mask   = (x.abs().pow(2).sum(dim=1) > 0)           # (B, H, W)
+    N_mask = mask.sum(dim=(1, 2)).reshape(B, 1, 1).to(Sigma.dtype)
 
-    # Normalise by the number of non-zero (masked) pixels
-    mask   = (x.abs().pow(2).sum(dim=2) > 0)               # (H, W, B)
-    N_mask = mask.sum(dim=(0, 1)).reshape(B, 1, 1).to(Sigma.dtype)
-
-    Sigma  = Sigma / N_mask                                  # (B, C, C)
-    return Sigma.permute(1, 2, 0)                           # (C, C, B)
+    return Sigma / N_mask               # (B, C, C)
 
 
 # ---------------------------------------------------------------------------
@@ -219,112 +182,97 @@ def ncov_est(
 
 def sqrt_covmat(Sigma: Tensor) -> Tensor:
     """
-    Matrix square root of a positive semi-definite matrix (or batch thereof).
-
-    For a PSD matrix Σ = U S Uᴴ the square root is  √Σ = U √S Uᴴ.
+    Matrix square root of a PSD matrix (or batch thereof).
+    Sigma = U S U^H  =>  sqrt(Sigma) = U sqrt(S) U^H
 
     Parameters
     ----------
-    Sigma : Tensor, shape (C, C) or (C, C, B)
-
-    Returns
-    -------
-    Tensor, same shape as *Sigma*.
+    Sigma : (C, C) or (B, C, C)
     """
     if Sigma.dim() == 2:
         U, s, _ = torch.linalg.svd(Sigma)
-        # √Σ = U · diag(√s) · Uᴴ
         return U @ (s.sqrt().unsqueeze(0) * U.conj().T)
 
-    # Batched: Sigma is (C, C, B)
-    Sig_b           = Sigma.permute(2, 0, 1)          # (B, C, C)
-    U, s, _         = torch.linalg.svd(Sig_b)         # U:(B,C,C),  s:(B,C)
-    sqrt_s          = s.sqrt().unsqueeze(1)            # (B, 1, C)
-    result          = U @ (sqrt_s * U.conj().transpose(-2, -1))  # (B, C, C)
-    return result.permute(1, 2, 0)                     # (C, C, B)
+    # Batched (B, C, C)
+    U, s, _ = torch.linalg.svd(Sigma)                  # U:(B,C,C), s:(B,C)
+    return U @ (s.sqrt().unsqueeze(1) * U.conj().transpose(-2, -1))
 
 
 # ---------------------------------------------------------------------------
 # Whitening
 # ---------------------------------------------------------------------------
 
-def _inv_sqrt_sigma(
-    U:   Tensor,   # (C, C, B) – eigenvectors of Σ
-    s:   Tensor,   # (C, B)    – eigenvalues  of Σ
-    t:   Tensor,   # (H, W, C, B)
-    eps: float,
-) -> Tensor:
-    """Apply Σ^{-1/2} = U diag(1/√s) Uᴴ channel-wise to *t*."""
-    t1          = _mul_channel(_batched_adjoint(U), t)       # Uᴴ t
-    inv_sqrt_s  = 1.0 / (s.sqrt() + eps)                    # (C, B)
-    t2          = t1 * inv_sqrt_s.unsqueeze(0).unsqueeze(0) # (H, W, C, B)
-    return _mul_channel(U, t2)                               # U t2
+def _inv_sqrt_sigma(U: Tensor, s: Tensor, t: Tensor, eps: float) -> Tensor:
+    """
+    Apply Sigma^{-1/2} = U diag(1/sqrt(s)) U^H to t along the channel dim.
+
+    Parameters
+    ----------
+    U : (B, C, C)
+    s : (B, C)    singular values (real, >= 0)
+    t : (B, C, H, W)
+    """
+    t1         = _mul_channel(U.conj().transpose(-2, -1), t)    # U^H t
+    inv_sqrt_s = 1.0 / s.real.clamp(min=eps).sqrt()             # (B, C)
+    t2         = t1 * inv_sqrt_s.unsqueeze(-1).unsqueeze(-1)    # (B, C, H, W)
+    return _mul_channel(U, t2)
 
 
 def _coil_combine(smaps: Tensor, data: Tensor) -> Tensor:
-    """Sensitivity-weighted coil combination → (H, W, 1, B)."""
-    return (smaps.conj() * data).sum(dim=2, keepdim=True)
+    """Sensitivity-weighted coil combination.  (B, C, H, W) -> (B, 1, H, W)"""
+    return (smaps.conj() * data).sum(dim=1, keepdim=True)
 
 
 def whiten(
-    x:      Union[Tensor, List[Tensor]],
-    smaps:  Optional[Tensor] = None,
-    Sigma:  Optional[Tensor] = None,
+    x:     Union[Tensor, List[Tensor]],
+    smaps: Optional[Tensor] = None,
+    Sigma: Optional[Tensor] = None,
 ) -> Union[Tensor, dict]:
     """
     Whiten multicoil image-domain data.
 
-    Three calling conventions (matching the Julia overloads):
+    Calling conventions
+    -------------------
+    1. whiten(x)  or  whiten(x, Sigma=Sigma)
+       No sensitivity maps -> returns whitened Tensor directly.
 
-    1. ``whiten(x)``  or  ``whiten(x, Sigma=...)``
-       No sensitivity maps: returns the whitened data tensor directly.
-
-    2. ``whiten(x, smaps)``  or  ``whiten(x, smaps, Sigma)``
+    2. whiten(x, smaps)  or  whiten(x, smaps, Sigma)
        Single data tensor with sensitivity maps.
 
-    3. ``whiten([x1, x2, ...], smaps)``  or  ``whiten([...], smaps, Sigma)``
+    3. whiten([x1, x2, ...], smaps)
        List of data tensors sharing the same sensitivity maps.
 
     Parameters
     ----------
-    x     : Tensor (H, W, C, B)  **or** list of such tensors.
-    smaps : Tensor (H, W, C, B), optional – sensitivity maps.
-    Sigma : Tensor (C, C, B),    optional – noise covariance.
-            Estimated from *x* (or *x[0]*) via :func:`ncov_est` if omitted.
+    x     : Tensor (B, C, H, W)  or list thereof
+    smaps : Tensor (B, C, H, W), optional
+    Sigma : Tensor (B, C, C),    optional – estimated via ncov_est if omitted
 
     Returns
     -------
-    If *smaps* is ``None``
-        Tensor – whitened data, shape (H, W, C, B).
-    Otherwise
-        dict with keys:
-        - ``"data"``  – whitened data (Tensor or list of Tensors)
-        - ``"smaps"`` – whitened & normalised sensitivity maps
-        - ``"sigma"`` – per-pixel scale factor, shape (H, W, 1, B)
-        - ``"zinv"``  – inverse normalisation map,  shape (H, W, 1, B)
+    Tensor (case 1)  or  dict with keys:
+        "data"  – whitened data, Tensor or list of Tensors (B, C, H, W)
+        "smaps" – whitened & normalised sensitivity maps   (B, C, H, W)
+        "sigma" – per-pixel scale factor                   (B, 1, H, W)
+        "zinv"  – inverse normalisation map                (B, 1, H, W)
     """
+    eps = _eps(x[0] if isinstance(x, (list, tuple)) else x)
 
-    # ── Case 1: no sensitivity maps ─────────────────────────────────────────
+    # Case 1: no sensitivity maps
     if smaps is None:
         assert isinstance(x, Tensor), "smaps=None requires a single Tensor x"
         if Sigma is None:
             Sigma = ncov_est(x)
-        U_b, s_b, _ = torch.linalg.svd(Sigma.permute(2, 0, 1))  # (B,C,C)
-        U = U_b.permute(1, 2, 0)   # (C,C,B)
-        s = s_b.permute(1, 0)      # (C,B)
-        return _inv_sqrt_sigma(U, s, x, _eps(x))
+        U, s, _ = torch.linalg.svd(Sigma)     # (B,C,C), (B,C)
+        return _inv_sqrt_sigma(U, s, x, eps)
 
-    # ── Case 2 & 3: sensitivity maps present ────────────────────────────────
+    # Case 2 & 3: sensitivity maps present
     xs: List[Tensor] = list(x) if isinstance(x, (list, tuple)) else [x]
 
     if Sigma is None:
         Sigma = ncov_est(xs[0])
 
-    # SVD of Σ — work in (B, C, C) internally, then convert back
-    U_b, s_b, _ = torch.linalg.svd(Sigma.permute(2, 0, 1))   # (B,C,C), (B,C)
-    U = U_b.permute(1, 2, 0)   # (C,C,B)
-    s = s_b.permute(1, 0)      # (C,B)
-    eps = _eps(smaps)
+    U, s, _ = torch.linalg.svd(Sigma)         # (B,C,C), (B,C)
 
     def sq_inv(t: Tensor) -> Tensor:
         return _inv_sqrt_sigma(U, s, t, eps)
@@ -333,29 +281,28 @@ def whiten(
     xs_w    = [sq_inv(xi) for xi in xs]
     smaps_w = sq_inv(smaps)
 
-    # Normalise whitened sensitivity maps  ‖smap_w(h,w)‖ → 1
-    z       = smaps_w.abs().pow(2).sum(dim=2, keepdim=True).sqrt()  # (H,W,1,B)
+    # Normalise whitened smaps: ||smap_w||_coil -> 1
+    z       = smaps_w.abs().pow(2).sum(dim=1, keepdim=True).sqrt()  # (B,1,H,W)
     smaps_w = smaps_w / (z + eps)
 
-    # Re-scale so the dynamic range of the coil-combined whitened image
-    # matches that of the original coil-combined image
+    # Re-scale whitened data to match dynamic range of original coil-combined image
     if len(xs) == 1:
-        beta  = _coil_combine(smaps,   xs[0]  ).abs().amax(dim=(0, 1), keepdim=True)
-        delta = _coil_combine(smaps_w, xs_w[0]).abs().amax(dim=(0, 1), keepdim=True)
+        beta  = _coil_combine(smaps,   xs[0]  ).abs().amax(dim=(2, 3), keepdim=True)
+        delta = _coil_combine(smaps_w, xs_w[0]).abs().amax(dim=(2, 3), keepdim=True)
     else:
         beta  = torch.stack(
-            [_coil_combine(smaps,   xi  ).abs().amax(dim=(0, 1)) for xi in xs],    dim=0
-        ).mean(0).unsqueeze(0)
+            [_coil_combine(smaps,   xi  ).abs().amax(dim=(2, 3)) for xi in xs],     dim=0
+        ).mean(0).unsqueeze(-1).unsqueeze(-1)
         delta = torch.stack(
-            [_coil_combine(smaps_w, xi_w).abs().amax(dim=(0, 1)) for xi_w in xs_w], dim=0
-        ).mean(0).unsqueeze(0)
+            [_coil_combine(smaps_w, xi_w).abs().amax(dim=(2, 3)) for xi_w in xs_w], dim=0
+        ).mean(0).unsqueeze(-1).unsqueeze(-1)
 
-    sigma = beta / delta                                        # (1, 1, 1, B)
+    sigma = beta / delta.clamp(min=eps)        # (B, 1, 1, 1)
     xs_w  = [xi_w * sigma for xi_w in xs_w]
 
     # Renormalisation maps
-    zinv  = (z > 0).to(sigma.dtype) / (sigma * z + eps)       # (H, W, 1, B)
-    sigma = (z > 0).to(sigma.dtype) * sigma                    # (H, W, 1, B)
+    zinv  = (z > 0).to(sigma.dtype) / (sigma * z + eps)   # (B, 1, H, W)
+    sigma = (z > 0).to(sigma.dtype) * sigma               # (B, 1, H, W)
 
     result_data = xs_w[0] if not isinstance(x, (list, tuple)) else xs_w
     return dict(data=result_data, smaps=smaps_w, sigma=sigma, zinv=zinv)
@@ -364,20 +311,20 @@ def whiten(
 def whiten_5d(
     y:     Tensor,
     smaps: Tensor,
-    Sigma: Tensor,
+    Sigma: Optional[Tensor] = None,
 ) -> dict:
     """
     Whiten a 5-D data tensor by slicing along the last dimension.
 
     Parameters
     ----------
-    y     : Tensor, shape (H, W, C, B, N)
-    smaps : Tensor, shape (H, W, C, B)
-    Sigma : Tensor, shape (C, C, B)
+    y     : (B, C, H, W, N)
+    smaps : (B, C, H, W)
+    Sigma : (B, C, C), optional
 
     Returns
     -------
-    Same dict as :func:`whiten` but ``"data"`` is a 5-D Tensor.
+    Same dict as whiten() but "data" is a 5-D Tensor (B, C, H, W, N).
     """
     slices = [y[..., ii] for ii in range(y.shape[-1])]
     result = whiten(slices, smaps, Sigma)

@@ -18,9 +18,13 @@ from utils import saveimg
 from model_utils import uball_project
 from metrics import joint_normalize, psnr, ssim
 from immap import ImMAP
+from dds import DDS
+from nle import whiten 
 
 def eval_immap( immap,      # ImMAP class
+                dds,        # DDS class
                 kspace_masked, # noisy masked kspace input
+                kspace_white, # dict of whiten(kspace) outputs
                 smaps,      # espirit smaps
                 noise_level,# initial noise level 
                 mask,       # acceleration mask (uniform)
@@ -39,27 +43,29 @@ def eval_immap( immap,      # ImMAP class
         3.5 -> forward_3p5
         4   -> forward_4
     """
-    if mode == 1:
+    if mode == '1':
         out = immap.forward(
             kspace_masked, noise_level, mask, smaps,
             None, verbose=True
         )
-    elif mode == 2:
+    elif mode == '2':
+        # In mode 2 let's using whitening kspace first
         out = immap.forward_2(
-            kspace_masked, noise_level, mask, smaps,
+            mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
             None, verbose=True
         )
-    elif mode == 2.5:
+        out = kspace_white['zinv']*out
+    elif mode == '2.5':
         out, _, _ = immap.forward_2p5(
             kspace_masked, noise_level, mask, smaps,
             lpdsnet, save_dir=None, verbose=True, mode=1
         )
-    elif mode == 3.5:
+    elif mode == '3.5':
         out = immap.forward_3p5(
             kspace_masked, noise_level, mask, smaps,
             lpdsnet, save_dir=None, verbose=True
         )
-    elif mode == 4:
+    elif mode == '2.5-WS':
         out = immap.forward_4(
             kspace_masked, noise_level, mask,
             smaps,
@@ -68,6 +74,19 @@ def eval_immap( immap,      # ImMAP class
             save_dir=None,
             verbose=True
         )
+    elif mode == 'DDS':
+        
+        out = dds.forward(
+            mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
+            None, verbose=True, sched = 'eero'
+        )
+        out = kspace_white['zinv']*out
+        '''
+        out = dds.forward(
+            kspace_masked, noise_level, mask, smaps,
+            None, verbose=True
+        )
+        '''
     else:
         raise ValueError(f"Unknown mode: {mode}")
     # For ssim, try just zeroing out all the nonmasked pixels?
@@ -148,7 +167,10 @@ def prep_data(  kspace_fname,       # Path to kspace
     
     brain_mask = torch.norm(espirit_smaps, dim = 0) != 0
 
-    return kspace, volume_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask
+    # Additionally return a whitened kspace 
+    kspace_white_dict = whiten(kspace[None], smaps = espirit_smaps[None])
+
+    return kspace, kspace_white_dict, smaps, espirit_smaps, mask, gnd_truth, brain_mask
 
 def main():
     # test on one specific sample
@@ -159,7 +181,7 @@ def main():
     kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
     
-    kspace, volume_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
+    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
     saveimg(gnd_truth, "gndtruth.png", contrast=True)
     # Load networks
     net = load_model('configs/eval_config.json', device = device)
@@ -170,19 +192,23 @@ def main():
     # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
     # Add noise in multicoil image space
     noise_level = 0.00
-    # noisy_kspace, _ = mri_awgn(kspace, mask, espirit_smaps, noise_level, kspace=True)
+    # mri_awgn returns a masked kspace with noise added in the multicoil image domain
     noisy_kspace, _ = mri_awgn(gnd_truth, mask, espirit_smaps, noise_level)
     e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level*255., mask = mask[None], smaps = espirit_smaps[None], mri = True)
 
+    # Save the e2erecon for comparison
+    saveimg(e2e_recon, "e2erecon.png", contrast=True)
+
     # Init ImMAP class
     # We may want to try a bunch of different lambda values:
-    immap = ImMAP(net, lam = 10**(3/2))
-    noise_level = 0.01
+    immap = ImMAP(net, lam = 10)
+    dds = DDS(net)
     # Generate brain mask 
-    modes = [2]
+    # modes = ['2', '2.5', '2.5-WS', 'DDS']
+    modes = ['DDS']
     immap_outs = []
     for mode in modes:
-        immap_outs.append(eval_immap(immap, noisy_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
+        immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
 
 if __name__ == "__main__":
     main()

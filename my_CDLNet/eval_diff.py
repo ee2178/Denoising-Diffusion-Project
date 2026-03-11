@@ -30,6 +30,7 @@ parser.add_argument("--eval_e2e", action='store_true' , help="True if want to ev
 parser.add_argument("--immap2p5_path", type = str, help="Corresponding path where immap2p5 args can be found", default = "configs/immap2p5_config.json")
 parser.add_argument("--e2enet_path", type = str, help="Corresponding path where mri recon net args can be found", default = "configs/mri_config.json")
 parser.add_argument("--immap_mode", type = str, help="Choose the mode of immap we want to evaluate (1, 2, 2.5, 3)", default = "1")
+parser.add_argument("--accel", type = int, help="Acceleration factor", default = 6)
 
 args = parser.parse_args()
 
@@ -109,7 +110,7 @@ def compute_metrics(args, device):
         with torch.no_grad():
             if fname.startswith('file_brain_AXT2'):
                 for slice in range(min_slice, max_slice):
-                    kspace, kspace_masked, smaps, mask, gnd_truth, brain_mask = prep_data(os.path.join(args.kspace_path, fname), slice, device = device)
+                    kspace, kspace_masked, smaps, mask, gnd_truth, brain_mask = prep_data(os.path.join(args.kspace_path, fname), slice, device = device, accel = args.accel)
                     if not args.eval_e2e:
                         # Use first line for regular immap
                         # recon = immap.forward_2_e2e_conditioned(kspace_masked, noise_level, mask, smaps)
