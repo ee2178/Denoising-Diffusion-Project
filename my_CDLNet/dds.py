@@ -54,7 +54,7 @@ class DDS(nn.Module):
         alpha_bar_vec = 1/(1+sig_t_vec**2)
         alpha_vec = torch.zeros_like(alpha_bar_vec)
         alpha_vec[0] = alpha_bar_vec[0] # First elements are the same, following elements are ratios of consecutive entries
-        alpha_vec[1:] = alpha_bar_vec[1:]/alpha_vec[:-1]
+        alpha_vec[1:] = alpha_bar_vec[1:]/alpha_bar_vec[:-1]
 
         # Initialize initial x
         x_t = torch.randn(y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
@@ -75,7 +75,7 @@ class DDS(nn.Module):
                 # Get noise level estimate
                 sigma_t = sig_t_vec[t]
                 # Estimate error
-                eps_t = (x_t-alpha_bar_vec[t]**(1/2)*x_hat_t)/(1-alpha_bar_vec[t]**(1/2))
+                eps_t = (x_t - torch.sqrt(alpha_bar_vec[t]) * x_hat_t) / torch.sqrt(1 - alpha_bar_vec[t])
                 # draw random noise
                 noise = torch.randn_like(x_t)
                 def A(x, E = E, EH = EH):
@@ -85,8 +85,8 @@ class DDS(nn.Module):
 
                 # Perform update
                 beta_t = 1 - alpha_vec[t]
-                r = alpha_bar_vec[t]/alpha_bar_vec[t+1]
-                beta_bar_t = ((1-alpha_bar_vec[t+1])/(1-alpha_bar_vec[t]))**(1/2)*(1-r)
+                r = alpha_bar_vec[t+1] / alpha_bar_vec[t]
+                beta_bar_t = torch.sqrt((1-alpha_bar_vec[t+1])/(1-alpha_bar_vec[t])) * (1 - alpha_bar_vec[t]/alpha_bar_vec[t+1])
                 sigma_bar_t = self.eta * beta_bar_t
 
                 x_t = alpha_bar_vec[t+1]**(1/2)*xp_t - (1-alpha_bar_vec[t+1]-sigma_bar_t**2)**(1/2)*eps_t + sigma_bar_t * noise
@@ -97,7 +97,6 @@ class DDS(nn.Module):
                 if verbose == True:
                     print(f"Iteration {t} complete. Noise level: {sigma_t}.")
 
-                t = t + 1
             if save_dir:
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
