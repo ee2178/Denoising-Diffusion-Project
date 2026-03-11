@@ -105,10 +105,15 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
         return x_t
 
-    def forward_2(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
+    def forward_2(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True, recon = None, sigma_start = 0.2):
         # Implement ImMAP 2!
         # Set initial conditions
-        x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
+        if recon is None:
+            x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
+        else:
+            x_t = recon + sigma_start*torch.randn_like(recon)
+            t = 1
+            sigma_t = sigma_start
         sigma_y = noise_level
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
         EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
