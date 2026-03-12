@@ -38,12 +38,11 @@ def main(args):
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
     
-    slice = args.slice
+    slice = int(args.slice)
     kspace_fname = args.kspace_path
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
-        for name in f.keys():
-            print(f[name][()])
+        print(f.attrs['acquisition'])
     # Squeeze smaps, also conjugate since they come as conjugated form
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
