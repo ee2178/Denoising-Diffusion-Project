@@ -76,17 +76,16 @@ def eval_immap( immap,      # ImMAP class
         )
     elif mode == '2-WS':
         # Try nonwhitened kspace first
+        out = immap.forward_2(
+            kspace_masked, 0.01, mask, smaps,
+            None, verbose=True, recon = init_recon
+        )
         '''
         out = immap.forward_2(
             mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
-            None, verbose=True
+            None, verbose=True, recon = init_recon
         )
         '''
-        # ImMAP2 with warm start
-        out = immap.forward_2(
-            kspace_masked, noise_level, mask, smaps,
-            None, verbose=True, recon = init_recon 
-        )
     elif mode == 'DDS':       
         out = dds.forward(
             mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
@@ -201,8 +200,7 @@ def main():
     lpdsnet_e2e = load_model('configs/mri_config.json', device = device)
 
     # Perform an e2e recon via LPDSNet for warm start
-    # noisy_kspace = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    # Add noise in multicoil image space
+    # Add noise in multicoil image space if we want
     noise_level = 0.00
     # mri_awgn returns a masked kspace with noise added in the multicoil image domain
     noisy_kspace, _ = mri_awgn(gnd_truth, mask, espirit_smaps, noise_level)
@@ -217,7 +215,7 @@ def main():
     dds = DDS(net)
     # Generate brain mask 
     # modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
-    modes = ['2-WS']
+    modes = ['2','2-WS']
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 

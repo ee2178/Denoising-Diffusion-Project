@@ -12,8 +12,9 @@ from functools import partial
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = '../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5')
-parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.05)
+parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = '../../datasets/fastmri/knee/multicoil_val/file1000323.h5')
+parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.01)
+parser.add_argument("--slice", type = float, help="Slice to kspace to focus on", default = 5)
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
@@ -37,10 +38,12 @@ def main(args):
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
     
-    slice = 3
+    slice = args.slice
     kspace_fname = args.kspace_path
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
+        for name in f.keys():
+            print(f[name][()])
     # Squeeze smaps, also conjugate since they come as conjugated form
     # smaps = smaps[0, :, :, :].conj()
     kspace = torch.from_numpy(kspace)  
@@ -49,7 +52,7 @@ def main(args):
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
 
-    _, mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 2, acs_lines = 24)
+    mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 6, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
@@ -59,7 +62,8 @@ def main(args):
     kspace_masked = mask * kspace
     # Try adding some noise to kspace
     noise_level = args.noise_level
-    kspace_masked = kspace_masked + noise_level*torch.randn_like(kspace_masked)
+    # Don't bother adding additional noise
+    # kspace_masked = kspace_masked + noise_level*torch.randn_like(kspace_masked)
     breakpoint()
 
     gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))

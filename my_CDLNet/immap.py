@@ -112,7 +112,9 @@ class ImMAP(nn.Module):
             x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
         else:
             x_t = recon + sigma_start*torch.randn_like(recon)
-            t = 1
+            # t = 1 is definitely wrong, we need to find a reasonable t for which we can say sigma_t = 0.2
+            # Following Eero's schedule, we can compute as
+            t = 60
             sigma_t = sigma_start
         sigma_y = noise_level
         E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
