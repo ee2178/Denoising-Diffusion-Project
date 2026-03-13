@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/coil_combine.py", line 130, in <module>
+    main()
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/coil_combine.py", line 113, in main
+    with h5py.File(tgt_path, "a") as tf:
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/h5py/_hl/files.py", line 507, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, fcpl, swmr=swmr)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/h5py/_hl/files.py", line 232, in make_fid
+    fid = h5f.open(name, h5f.ACC_RDWR, fapl=fapl)
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 106, in h5py.h5f.open
+BlockingIOError: [Errno 11] Unable to open file (unable to lock file, errno = 11, error message = 'Resource temporarily unavailable')

@@ -28,7 +28,7 @@ def main(args):
         device      = device,
         **train_args['fit'],
         epoch_fun = lambda epoch_num: save_args(args, epoch_num))
-    
+'''    
 def fit(net, opt, loaders, 
         sched = None,
         epochs = 1, 
@@ -171,7 +171,173 @@ def fit(net, opt, loaders,
                 epoch_fun(epoch)
 
         epoch = epoch + 1
-    
+'''
+def fit(net, opt, loaders,
+        sched=None,
+        epochs=1,
+        device=torch.device("cpu"),
+        save_dir=None,
+        start_epoch=1,
+        clip_grad=1,
+        noise_std=25,
+        demosaic=False,
+        verbose=True,
+        val_freq=1,
+        save_freq=1,
+        epoch_fun=None,
+        mcsure=False,
+        noise_dist='uniform',
+        backtrack_thresh=5,
+        max_steps=None,
+        val_every=2000,
+        save_every=5000):
+
+    print(f"fit: using device {device}")
+
+    if not isinstance(noise_std, (list, tuple)):
+        noise_std = (noise_std, noise_std)
+
+    if max_steps is None:
+        max_steps = epochs * len(loaders["train"])
+
+    ckpt_path = os.path.join(save_dir, '0.ckpt')
+    save_ckpt(ckpt_path, net, 0, opt, sched)
+
+    top_psnr = {"val":0}
+
+    step = start_epoch - 1
+    train_loader = loaders["train"]
+    train_iter = iter(train_loader)
+
+    # -----------------------
+    # tqdm progress bar
+    # -----------------------
+    pbar = tqdm(
+        total=max_steps,
+        initial=step,
+        dynamic_ncols=True,
+        desc="TRAIN"
+    )
+
+    while step < max_steps:
+
+        try:
+            batch = next(train_iter)
+        except StopIteration:
+            train_iter = iter(train_loader)
+            batch = next(train_iter)
+
+        net.train()
+
+        batch = batch.to(device)
+        batch = batch[:,None,:,:]
+        mask = 1
+
+        noisy_batch, sigma_n = awgn(batch, noise_std, dist=noise_dist)
+        obsrv_batch = mask * noisy_batch
+
+        opt.zero_grad()
+
+        batch_hat,_ = net(obsrv_batch, sigma_n, mask=mask)
+
+        if mcsure:
+            h = 1e-3
+            b = torch.randn_like(obsrv_batch)
+            batch_hat_b,_ = net(obsrv_batch + h*b, sigma_n, mask=mask)
+
+            div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
+            loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
+        else:
+            mse = torch.mean(torch.abs(batch-batch_hat)**2)
+            loss = torch.mean((sigma_n/255.+1e-3)**(-2)*torch.abs(batch-batch_hat)**2)
+
+        loss.backward()
+
+        if clip_grad is not None:
+            nn.utils.clip_grad_norm_(net.parameters(), clip_grad)
+
+        opt.step()
+        net.project()
+
+        step += 1
+        pbar.update(1)
+
+        if sched is not None:
+            sched.step()
+
+        # -----------------------
+        # Update tqdm metrics
+        # -----------------------
+        if verbose and step % 10 == 0:
+            total_norm = grad_norm(net.parameters())
+            pbar.set_postfix({
+                "loss": f"{loss.item():.2e}",
+                "gnorm": f"{total_norm:.2e}",
+                "lr": f"{getlr(opt)[0]:.2e}"
+            })
+
+        # ---------------------
+        # Validation
+        # ---------------------
+        if step % val_every == 0:
+
+            net.eval()
+            psnr = 0
+
+            with torch.no_grad():
+                for itern, batch in enumerate(
+                        tqdm(loaders["val"],
+                             desc=f"VAL@{step}",
+                             leave=False,
+                             dynamic_ncols=True)):
+
+                    batch = batch.to(device)
+                    batch = batch[:,None,:,:]
+
+                    phase_nstd = (noise_std[0]+noise_std[1])/2.0
+
+                    noisy_batch, sigma_n = awgn(batch, phase_nstd, dist=noise_dist)
+                    obsrv_batch = noisy_batch
+
+                    batch_hat,_ = net(obsrv_batch, sigma_n, mask=1)
+
+                    mse = torch.mean(torch.abs(batch-batch_hat)**2)
+                    psnr += -10*np.log10(mse.item())
+
+            psnr /= (itern+1)
+
+            print(f"\nVAL PSNR @ step {step}: {psnr:.3f} dB")
+
+            if psnr > top_psnr["val"]:
+                top_psnr["val"] = psnr
+            elif psnr + backtrack_thresh < top_psnr["val"]:
+
+                print("Validation dropped — backtracking")
+
+                ckpt_path = os.path.join(save_dir,"net.ckpt")
+                net,_,_,_ = load_ckpt(ckpt_path,net,opt,sched)
+
+                old_lr = np.array(getlr(opt))
+                new_lr = old_lr*0.8
+                setlr(opt,new_lr)
+
+                print("Updated LR:",new_lr)
+
+        # ---------------------
+        # Checkpoint
+        # ---------------------
+        if step % save_every == 0:
+
+            ckpt_path = os.path.join(save_dir,"net.ckpt")
+            print(f"\nCheckpoint: {ckpt_path} (step {step})")
+
+            save_ckpt(ckpt_path,net,step,opt,sched)
+
+            if epoch_fun is not None:
+                epoch_fun(step)
+
+    pbar.close()
+
 def grad_norm(params):
     """ computes norm of mini-batch gradient
     """

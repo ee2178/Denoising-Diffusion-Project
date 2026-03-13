@@ -1,0 +1,60 @@
+{
+"type": "LPDSNet",
+"model": {
+	"adaptive": true,
+    "e2e_diff" : true,
+    "K": 30,
+	"M": 169,
+	"C": 1,
+	"P": 7,
+	"s": 2
+},
+"paths": {
+	"save": "trained_nets/knee/LPDS_MRI_Recon_R10",
+	"ckpt": null
+},
+"train": {
+	"loaders": {
+		"batch_size": 1,
+		"crop_size": 256,
+		"trn_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train"],
+		"val_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val"],
+		"tst_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test"],
+		"trn_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_train"],
+        "val_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_val"],
+        "tst_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_test_v2"],
+        "scaling_fac":2e3,
+        "num_workers": 14,
+        "modality": "knee"
+	},
+	"fit": {
+		"epochs": null,
+		"noise_std": [10, 13],
+		"image_noise_std": [0, 126],
+        "val_freq": 50,
+		"save_freq": 5,
+		"backtrack_thresh": 5,
+		"verbose": true,
+		"clip_grad": 5e-2,
+		"demosaic": false,
+		"mcsure": false,
+        "x_init":false,
+        "noise_dist": "uniform",
+	    "denoiser_args_path":"eval_config.json",
+        "max_steps": 300000,
+        "val_every": 2000,
+        "save_every": 5000
+    },
+	"opt": {
+		"lr": 5e-4
+	},
+	"sched": {
+		"gamma": 0.95,
+		"step_size": 50
+	}
+},
+"mri":{
+    "R": 10,
+    "acs_lines" : 24
+}
+}

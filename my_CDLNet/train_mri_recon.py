@@ -51,7 +51,7 @@ def main(args):
         **train_args['fit'],
         **mri_args,
         epoch_fun = lambda epoch_num: save_args(args, epoch_num))
-    
+'''    
 def fit(net, opt, loaders, 
         sched = None,
         epochs = 1, 
@@ -122,7 +122,8 @@ def fit(net, opt, loaders,
                 # kspace_masked_noisy, sigma_n = awgn(kspace_masked, phase_nstd)  # (also fixed your masked/noise mismatch)
                 
                 # When adding noise, we actually want to add noise in the multicoil image domain and then turn to kspace and mask
-                kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, phase_nstd)
+                # WE ACTUALLY DO NOT WANT TO ADD NOISE, KNEE IMAGES ARE INHERENTLY NOISY
+                kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, 0.)
                 opt.zero_grad(set_to_none=True)
                 sigma_n = torch.as_tensor(sigma_n, device=image.device, dtype=torch.float32)
                 with torch.set_grad_enabled(phase == 'train'):
@@ -214,7 +215,232 @@ def fit(net, opt, loaders,
                 epoch_fun(epoch)
 
         epoch = epoch + 1
-    
+'''
+def fit(net, opt, loaders,
+        sched=None,
+        epochs=1,
+        device=torch.device("cpu"),
+        save_dir=None,
+        start_epoch=1,
+        clip_grad=1,
+        noise_std=25,
+        image_noise_std=0,
+        demosaic=False,
+        verbose=True,
+        val_freq=1,
+        save_freq=1,
+        epoch_fun=None,
+        mcsure=False,
+        noise_dist='uniform',
+        x_init=False,
+        denoiser_args_path=None,
+        R=8,
+        acs_lines=24,
+        backtrack_thresh=1,
+        log_every=50,
+        max_steps=None,
+        val_every=2000,
+        save_every=5000):
+
+    print(f"fit: using device {device}")
+
+    if not isinstance(noise_std, (list, tuple)):
+        noise_std = (noise_std, noise_std)
+
+    if max_steps is None:
+        max_steps = epochs * len(loaders["train"])
+
+    ckpt_path = os.path.join(save_dir, '0.ckpt')
+    save_ckpt(ckpt_path, net, 0, opt, sched)
+
+    top_psnr = {"val":0}
+
+    step = start_epoch - 1
+
+    train_loader = loaders["train"]
+    train_iter = iter(train_loader)
+
+    pbar = tqdm(total=max_steps, initial=step, dynamic_ncols=True, desc="TRAIN")
+
+    # GPU running statistics (no sync)
+    loss_sum = torch.zeros((), device=device)
+    mse_sum  = torch.zeros((), device=device)
+    window_count = 0
+
+    while step < max_steps:
+
+        try:
+            batch = next(train_iter)
+        except StopIteration:
+            train_iter = iter(train_loader)
+            batch = next(train_iter)
+
+        _, smaps, image = batch
+
+        smaps = smaps.to(device, non_blocking=True)
+        image = image.to(device, non_blocking=True)
+
+        net.train()
+
+        mask = get_mask(smaps, R, acs_lines)
+
+        kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, 0.)
+        # We have one extra dimension after this
+        kspace_masked_noisy = kspace_masked_noisy[0]
+        sigma_n = torch.as_tensor(sigma_n, device=image.device, dtype=torch.float32)
+        opt.zero_grad(set_to_none=True)
+        if x_init:
+            x_t, sig_t = awgn(image, image_noise_std, dist=noise_dist)
+            img_recon,_ = net.forward_double_noise(
+                kspace_masked_noisy,
+                sigma_n,
+                mask,
+                smaps,
+                x_init=x_t,
+                mri=True,
+                sigma_t=sig_t
+            )
+
+            loss = torch.mean(torch.pow(sig_t/255., -2) * (image - img_recon).abs()**2)
+
+        else:
+            img_recon,_ = net(
+                kspace_masked_noisy,
+                sigma_n,
+                mask,
+                smaps,
+                mri=True
+            )
+
+            loss = torch.mean((image - img_recon).abs()**2)
+
+        mse = torch.mean((image - img_recon).abs()**2)
+
+        loss.backward()
+
+        if clip_grad is not None:
+            nn.utils.clip_grad_norm_(net.parameters(), clip_grad)
+
+        opt.step()
+        net.project()
+
+        step += 1
+        pbar.update(1)
+
+        if sched is not None:
+            sched.step()
+
+        # accumulate stats on GPU
+        loss_sum += loss.detach()
+        mse_sum  += mse.detach()
+        window_count += 1
+
+        # -----------------------
+        # Logging (rare CPU sync)
+        # -----------------------
+        if verbose and step % log_every == 0:
+
+            avg_loss = (loss_sum / window_count).item()
+            avg_mse  = (mse_sum  / window_count).item()
+
+            avg_psnr = -10.0 * math.log10(avg_mse + 1e-12)
+
+            # grad norm less frequent
+            total_norm = grad_norm(net.parameters()) if step % (log_every*4) == 0 else None
+
+            postfix = {
+                "loss": f"{avg_loss:.3e}",
+                "psnr": f"{avg_psnr:.2f}",
+                "lr": f"{getlr(opt)[0]:.2e}"
+            }
+
+            if total_norm is not None:
+                postfix["gnorm"] = f"{total_norm:.2e}"
+
+            pbar.set_postfix(postfix)
+
+            # reset window stats
+            loss_sum.zero_()
+            mse_sum.zero_()
+            window_count = 0
+
+        # -----------------------
+        # Validation
+        # -----------------------
+        if step % val_every == 0:
+
+            net.eval()
+
+            mse_sum_val = torch.zeros((), device=device)
+
+            with torch.no_grad():
+
+                for itern, batch in enumerate(
+                        tqdm(loaders["val"],
+                             desc=f"VAL@{step}",
+                             leave=False,
+                             dynamic_ncols=True)):
+
+                    _, smaps, image = batch
+
+                    smaps = smaps.to(device)
+                    image = image.to(device)
+
+                    mask = get_mask(smaps, R, acs_lines)
+
+                    kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, 0.)
+                    sigma_n = torch.as_tensor(sigma_n, device=image.device)
+
+                    img_recon,_ = net(
+                        kspace_masked_noisy,
+                        sigma_n,
+                        mask,
+                        smaps,
+                        mri=True
+                    )
+
+                    mse = torch.mean((image - img_recon).abs()**2)
+                    mse_sum_val += mse
+
+            avg_mse = (mse_sum_val / (itern + 1)).item()
+            psnr = -10 * math.log10(avg_mse + 1e-12)
+
+            print(f"\nVAL PSNR @ step {step}: {psnr:.3f} dB")
+
+            if psnr > top_psnr["val"]:
+                top_psnr["val"] = psnr
+
+            elif psnr + backtrack_thresh < top_psnr["val"]:
+
+                print("Validation dropped — backtracking")
+
+                ckpt_path = os.path.join(save_dir, "net.ckpt")
+
+                net,_,_,_ = load_ckpt(ckpt_path, net, opt, sched)
+
+                old_lr = np.array(getlr(opt))
+                new_lr = old_lr * 0.8
+                setlr(opt, new_lr)
+
+                print("Updated LR:", new_lr)
+
+        # -----------------------
+        # Checkpoint
+        # -----------------------
+        if step % save_every == 0:
+
+            ckpt_path = os.path.join(save_dir, "net.ckpt")
+
+            print(f"\nCheckpoint: {ckpt_path} (step {step})")
+
+            save_ckpt(ckpt_path, net, step, opt, sched)
+
+            if epoch_fun is not None:
+                epoch_fun(step)
+
+    pbar.close()
+
+
 def grad_norm(params):
     """ computes norm of mini-batch gradient
     """

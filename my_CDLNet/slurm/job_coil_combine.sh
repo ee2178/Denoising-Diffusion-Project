@@ -31,5 +31,5 @@ python3 coil_combine.py \
   --train /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_train \
   --val   /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_val \
   --test  /home/ee2178/scratch/ee2178/datasets/fastmri/knee/multicoil_test_v2 \
-  --target /home/ee2178/scratch/ee2178/datasets/fastmri_preprocessed/knee_T2W_coil_combined \
+  --target /home/ee2178/scratch/ee2178/datasets/fastmri_preprocessed/knee_coil_combined \
   --device cuda:0

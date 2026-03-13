@@ -1,5 +1,6 @@
 import torch 
 import torch.fft as fft
+import numpy as np
 import data
 import os
 import h5py
@@ -14,11 +15,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--kspace_path", type = str, help="Corresponding path where kspace data can be found", default = '../../datasets/fastmri/knee/multicoil_val/file1000323.h5')
 parser.add_argument("--noise_level", type = float, help="Std deviation of injected noise into kspace data", default = 0.01)
-parser.add_argument("--slice", type = float, help="Slice to kspace to focus on", default = 5)
+parser.add_argument("--slice", type = int, help="Slice to kspace to focus on", default = None)
 
 # This will implement SENSE, which essentially performs conjugate gradient on the normal equations for MRI
 
-def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0.0001 + 0.000j)):
+def eHe(x, mri_encoding, mri_decoding, lam = torch.tensor(0. + 0.j)):
     # Performs E^H E with lambda regularization
     return mri_decoding(mri_encoding(x)) + lam * x
 
@@ -37,21 +38,22 @@ def main(args):
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-    
-    slice = int(args.slice)
     kspace_fname = args.kspace_path
     with h5py.File(kspace_fname) as f:
-        kspace = f['kspace'][slice, :, :, :]
+        kspace = f['kspace'][()]
         print(f.attrs['acquisition'])
-    # Squeeze smaps, also conjugate since they come as conjugated form
-    # smaps = smaps[0, :, :, :].conj()
+
+    if args.slice is None:
+        slice = np.arange(0, kspace.shape[0], 1)
+    else:
+        slice = [int(args.slice)]
     kspace = torch.from_numpy(kspace)  
-    smaps = walsh_smaps(ifftc(kspace[None]))
+    smaps = walsh_smaps(ifftc(kspace))
     smaps = torch.squeeze(smaps)
     # Detect acceleration maps
     #mask = detect_acc_mask(kspace)
 
-    mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = 6, acs_lines = 24)
+    mask = make_acc_mask(shape = (smaps.shape[-2], smaps.shape[-1]), accel = 6, acs_lines = 24)
     # Send to GPU
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
@@ -63,16 +65,15 @@ def main(args):
     noise_level = args.noise_level
     # Don't bother adding additional noise
     # kspace_masked = kspace_masked + noise_level*torch.randn_like(kspace_masked)
-    breakpoint()
 
-    gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[1], smaps.shape[2], device = device), smaps))
-    saveimg(gnd_truth, "EHy.png")
-    mri_recon, tol_reached = sense(kspace_masked, mask, smaps, verbose = True)
-    zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
-
-    saveimg(zero_filled_recon, "test_zerofilled.png")
-    saveimg(mri_recon, "test_sense.png")
-    # saveimg(image, "gnd_truth.png")
+    for s in slice:
+        mri_recon, tol_reached = sense(kspace_masked[s, :, :, :], mask, smaps[s, :, :, :], verbose = True)
+        # zero_filled_recon = mri_decoding(kspace_masked, mask, smaps)
+        # For our purposes there is no need to compute ground truth
+        # gnd_truth = (mri_decoding(kspace, torch.ones(smaps.shape[-2], smaps.shape[-1], device = device), smaps))
+        # saveimg(zero_filled_recon, "test_zerofilled.png")
+        saveimg(mri_recon, "sense_knee/test_sense_slice"+str(s)+".png")
+        # saveimg(image, "gnd_truth.png")
 
 if __name__ == "__main__":
     """ 

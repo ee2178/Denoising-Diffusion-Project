@@ -10,23 +10,36 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from tqdm import tqdm
 
+def is_pd_scan(fname):
+    with h5py.File(fname, "r") as f:
+        acquisition = f.attrs["acquisition"]
+    return acquisition == "CORPD_FBK"
+
 class MRIKSpaceDataset(data.Dataset):
-    def __init__(self, root_dirs, kspace_dirs, transform, scaling_fac = 2e3, start_slice=0, end_slice=10):
+    def __init__(self, root_dirs, kspace_dirs, transform, scaling_fac = 2e3, start_slice=0, end_slice=10, modality = 'brain'):
         self.image_paths = []
         self.kspace_paths = []
 
         for cur_path in root_dirs:
             self.image_paths += [path.join(cur_path, file) \
                 for file in listdir(cur_path) \
+                # For knee, this will automatically search in the right directory since I did filtering ahead of time
                 if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5'))]
 
         print(f"Loading {root_dirs}:")
         
-        for cur_path in kspace_dirs:
-            self.kspace_paths += [path.join(cur_path, file) \
-                for file in listdir(cur_path) \
-                if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5')) and file.startswith('file_brain_AXT2')]
-        
+        if modality == 'brain':
+            for cur_path in kspace_dirs:
+                self.kspace_paths += [path.join(cur_path, file) \
+                    for file in listdir(cur_path) \
+                    if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5')) and file.startswith('file_brain_AXT2')]
+        elif modality == 'knee':
+            for cur_path in kspace_dirs:
+                self.kspace_paths += [path.join(cur_path, file) \
+                    for file in listdir(cur_path) \
+                    # Filter by looking for PD scans only
+                    if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5')) and is_pd_scan(path.join(cur_path, file))]
+
         print(f"Loading {kspace_dirs}")
 
         self.root_dirs = root_dirs
@@ -55,7 +68,7 @@ class MRIKSpaceDataset(data.Dataset):
 
         return kspace, smaps, image
 
-def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, scaling_fac = 1e6, num_workers = 1):
+def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, scaling_fac = 1e6, num_workers = 1, modality = 'brain'):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
@@ -65,7 +78,7 @@ def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, c
         #                          transforms.RandomVerticalFlip(),
         #                          ])
         xfm = None
-    return data.DataLoader(MRIKSpaceDataset(dir_list, kspace_dir_list, xfm, scaling_fac),
+    return data.DataLoader(MRIKSpaceDataset(dir_list, kspace_dir_list, xfm, scaling_fac, modality = modality),
                            batch_size = batch_size,
                            drop_last  = (not test),
                            shuffle    = (not test))
@@ -80,7 +93,8 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                   batch_size = [1,1,1],
                   load_color = False, 
                   scaling_fac = 1e6,
-                  num_workers = 1):
+                  num_workers = 1,
+                  modality = 'brain'):
 
     if type(batch_size) is int:
         batch_size = [batch_size, 1, 1]
@@ -92,19 +106,22 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                             crop_size=crop_size, 
                                             test=False, 
                                             scaling_fac = scaling_fac,
-                                            num_workers = num_workers),
+                                            num_workers = num_workers,
+                                            modality = modality),
                    'val':   get_data_loader(val_path_list,
                                             val_kspace_path_list,
                                             batch_size[1], 
                                             load_color, 
                                             test=True, 
                                             scaling_fac = scaling_fac,
-                                            num_workers = num_workers),
+                                            num_workers = num_workers,
+                                            modality = modality),
                    'test':  get_data_loader(tst_path_list, 
                                             tst_kspace_path_list,
                                             batch_size[2], 
                                             load_color, 
                                             test=True, 
                                             scaling_fac = scaling_fac,
-                                            num_workers = num_workers)}
+                                            num_workers = num_workers,
+                                            modality = modality)}
     return dataloaders

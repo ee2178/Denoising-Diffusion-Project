@@ -23,21 +23,6 @@ class MRIDataset(data.Dataset):
                 if file.endswith(('tif','tiff','png','jpg','jpeg','bmp','.h5'))]
 
         print(f"Loading {root_dirs}:")
-        # for i in tqdm(range(len(self.image_paths))):
-        #    if load_color:
-        #        self.image_list.append(Image.open(self.image_paths[i]))
-        #    else:
-        #        with h5py.File(self.image_paths[i]) as f:
-        #            dataset = f['image']
-                # # Get number of slices in the image volume
-                # num_slices = image_volume.shape[0]
-                # # Pick a random number between 2 and num_slices - 2
-                # idx = (num_slices-4) * torch.rand(1) + num_slices/2
-                # idx = round(idx[0].numpy())
-                # image = image_volume[idx, :, :, :]
-         #       self.image_list.append(dataset)
-                
-
         self.root_dirs = root_dirs
         self.transform = transform
         self.scaling_fac = scaling_fac
