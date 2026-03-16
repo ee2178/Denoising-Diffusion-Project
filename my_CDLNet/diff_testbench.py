@@ -135,7 +135,7 @@ def load_model(config, verbose = False, device = 'cpu'):
 
 def prep_data(  kspace_fname,       # Path to kspace
                 slice,              # Slice to extract
-                smap_root = "../../datasets/fastmri_preprocessed/brain_T2W_coil_combined/val", # Path to smaps
+                smap_root = "../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val", # Path to smaps
                 noise_level = 0.0,  # Additive noise level
                 acs = 24,           # Default acs size
                 accel = 6,          # Acceleration rate
@@ -188,16 +188,19 @@ def main():
     ngpu = torch.cuda.device_count()
     device = torch.device("cuda:0" if ngpu > 0 else "cpu")
     print(f"Using device {device}.")
-
-    kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
+    # Use knee, not brain
+    kspace_fname = '../../datasets/fastmri/knee/multicoil_val/file1000323.h5'
+    # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
-    
-    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = 5, accel = 6, device = device)
+    # MRI Params
+    accel = 6
+    slice_ = 17
+    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = slice_, accel = accel, device = device)
     saveimg(gnd_truth, "gndtruth.png", contrast=True)
     # Load networks
-    net = load_model('configs/eval_config.json', device = device)
-    net_immap2p5 = load_model('configs/immap2p5_config.json', device = device)
-    lpdsnet_e2e = load_model('configs/mri_config.json', device = device)
+    net = load_model('configs/knee/eval_config.json', device = device)
+    net_immap2p5 = load_model('configs/knee/immap2p5_R'+str(accel)+'_config.json', device = device)
+    lpdsnet_e2e = load_model('configs/knee/mri_R'+str(accel)+'_config.json', device = device)
 
     # Perform an e2e recon via LPDSNet for warm start
     # Add noise in multicoil image space if we want
@@ -214,8 +217,8 @@ def main():
     immap = ImMAP(net, lam = 10)
     dds = DDS(net)
     # Generate brain mask 
-    # modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
-    modes = ['2','2-WS']
+    modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
+    # modes = ['2','2-WS']
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 

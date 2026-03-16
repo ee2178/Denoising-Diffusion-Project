@@ -10,7 +10,7 @@
 },
 "paths": {
 	"save": "trained_nets/knee/LPDSNet",
-	"ckpt": null
+	"ckpt": "trained_nets/knee/LPDSNet/net.ckpt"
 },
 "train": {
 	"loaders": {

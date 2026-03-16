@@ -11,7 +11,7 @@
 },
 "paths": {
 	"save": "trained_nets/knee/LPDS_ImMAP2p5_R10",
-	"ckpt": null
+	"ckpt": "trained_nets/knee/LPDS_ImMAP2p5_R10/net.ckpt"
 },
 "train": {
 	"loaders": {
@@ -23,6 +23,8 @@
 		"trn_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_train"],
         "val_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_val"],
         "tst_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_test_v2"],
+        "start_slice": 10,
+        "end_slice": 25,
         "scaling_fac":2e3,
         "num_workers": 14,
         "modality": "knee"

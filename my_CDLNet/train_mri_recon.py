@@ -389,6 +389,7 @@ def fit(net, opt, loaders,
                     mask = get_mask(smaps, R, acs_lines)
 
                     kspace_masked_noisy, sigma_n = mri_awgn(image, mask, smaps, 0.)
+                    kspace_masked_noisy = kspace_masked_noisy[0]
                     sigma_n = torch.as_tensor(sigma_n, device=image.device)
 
                     img_recon,_ = net(

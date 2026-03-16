@@ -1,0 +1,411 @@
+Running job 3 with config configs/knee/mri_R10_config.json
+{'model': {'C': 1,
+           'K': 30,
+           'M': 169,
+           'P': 7,
+           'adaptive': True,
+           'e2e_diff': True,
+           's': 2},
+ 'mri': {'R': 10, 'acs_lines': 24},
+ 'paths': {'ckpt': None, 'save': 'trained_nets/knee/LPDS_MRI_Recon_R10'},
+ 'train': {'fit': {'backtrack_thresh': 5,
+                   'clip_grad': 0.05,
+                   'demosaic': False,
+                   'denoiser_args_path': 'eval_config.json',
+                   'epochs': None,
+                   'image_noise_std': [0, 126],
+                   'max_steps': 300000,
+                   'mcsure': False,
+                   'noise_dist': 'uniform',
+                   'noise_std': [10, 13],
+                   'save_every': 5000,
+                   'save_freq': 5,
+                   'val_every': 2000,
+                   'val_freq': 50,
+                   'verbose': True,
+                   'x_init': False},
+           'loaders': {'batch_size': 1,
+                       'crop_size': 256,
+                       'end_slice': 25,
+                       'modality': 'knee',
+                       'num_workers': 14,
+                       'scaling_fac': 2000.0,
+                       'start_slice': 10,
+                       'trn_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_train'],
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train'],
+                       'tst_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_test_v2'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test'],
+                       'val_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_val'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val']},
+           'opt': {'lr': 0.0005},
+           'sched': {'gamma': 0.95, 'step_size': 50}},
+ 'type': 'LPDSNet'}
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train']:
+Loading ['../../datasets/fastmri/knee/multicoil_train']
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val']:
+Loading ['../../datasets/fastmri/knee/multicoil_val']
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test']:
+Loading ['../../datasets/fastmri/knee/multicoil_test_v2']
+Running power-method on initial dictionary...
+Done. L=3.314e+03+6.759e-06j.
+Total Number of Parameters: 760,560
+Using trained_nets/knee/LPDS_MRI_Recon_R10 ...
+fit: using device cuda:0
+
+VAL PSNR @ step 2000: 35.237 dB
+
+VAL PSNR @ step 4000: 36.021 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 5000)
+
+VAL PSNR @ step 6000: 36.033 dB
+
+VAL PSNR @ step 8000: 35.556 dB
+
+VAL PSNR @ step 10000: 35.831 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 10000)
+
+VAL PSNR @ step 12000: 35.735 dB
+
+VAL PSNR @ step 14000: 35.673 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 15000)
+
+VAL PSNR @ step 16000: 35.414 dB
+
+VAL PSNR @ step 18000: 35.770 dB
+
+VAL PSNR @ step 20000: 35.649 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 20000)
+
+VAL PSNR @ step 22000: 35.958 dB
+
+VAL PSNR @ step 24000: 35.798 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 25000)
+
+VAL PSNR @ step 26000: 35.878 dB
+
+VAL PSNR @ step 28000: 36.128 dB
+
+VAL PSNR @ step 30000: 36.094 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 30000)
+
+VAL PSNR @ step 32000: 35.920 dB
+
+VAL PSNR @ step 34000: 35.947 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 35000)
+
+VAL PSNR @ step 36000: 36.265 dB
+
+VAL PSNR @ step 38000: 35.769 dB
+
+VAL PSNR @ step 40000: 35.435 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 40000)
+
+VAL PSNR @ step 42000: 36.087 dB
+
+VAL PSNR @ step 44000: 36.389 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 45000)
+
+VAL PSNR @ step 46000: 36.036 dB
+
+VAL PSNR @ step 48000: 36.103 dB
+
+VAL PSNR @ step 50000: 35.785 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 50000)
+
+VAL PSNR @ step 52000: 35.700 dB
+
+VAL PSNR @ step 54000: 35.771 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 55000)
+
+VAL PSNR @ step 56000: 36.059 dB
+
+VAL PSNR @ step 58000: 35.715 dB
+
+VAL PSNR @ step 60000: 36.133 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 60000)
+
+VAL PSNR @ step 62000: 36.155 dB
+
+VAL PSNR @ step 64000: 35.968 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 65000)
+
+VAL PSNR @ step 66000: 35.562 dB
+
+VAL PSNR @ step 68000: 35.697 dB
+
+VAL PSNR @ step 70000: 36.021 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 70000)
+
+VAL PSNR @ step 72000: 35.930 dB
+
+VAL PSNR @ step 74000: 35.598 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 75000)
+
+VAL PSNR @ step 76000: 36.056 dB
+
+VAL PSNR @ step 78000: 36.114 dB
+
+VAL PSNR @ step 80000: 36.011 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 80000)
+
+VAL PSNR @ step 82000: 35.931 dB
+
+VAL PSNR @ step 84000: 35.909 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 85000)
+
+VAL PSNR @ step 86000: 35.514 dB
+
+VAL PSNR @ step 88000: 35.773 dB
+
+VAL PSNR @ step 90000: 35.878 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 90000)
+
+VAL PSNR @ step 92000: 36.369 dB
+
+VAL PSNR @ step 94000: 36.180 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 95000)
+
+VAL PSNR @ step 96000: 35.955 dB
+
+VAL PSNR @ step 98000: 35.957 dB
+
+VAL PSNR @ step 100000: 35.471 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 100000)
+
+VAL PSNR @ step 102000: 35.829 dB
+
+VAL PSNR @ step 104000: 35.795 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 105000)
+
+VAL PSNR @ step 106000: 35.295 dB
+
+VAL PSNR @ step 108000: 35.984 dB
+
+VAL PSNR @ step 110000: 35.680 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 110000)
+
+VAL PSNR @ step 112000: 35.731 dB
+
+VAL PSNR @ step 114000: 35.871 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 115000)
+
+VAL PSNR @ step 116000: 36.003 dB
+
+VAL PSNR @ step 118000: 35.660 dB
+
+VAL PSNR @ step 120000: 35.968 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 120000)
+
+VAL PSNR @ step 122000: 36.254 dB
+
+VAL PSNR @ step 124000: 36.097 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 125000)
+
+VAL PSNR @ step 126000: 35.679 dB
+
+VAL PSNR @ step 128000: 36.022 dB
+
+VAL PSNR @ step 130000: 35.602 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 130000)
+
+VAL PSNR @ step 132000: 35.408 dB
+
+VAL PSNR @ step 134000: 35.812 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 135000)
+
+VAL PSNR @ step 136000: 35.908 dB
+
+VAL PSNR @ step 138000: 35.951 dB
+
+VAL PSNR @ step 140000: 35.606 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 140000)
+
+VAL PSNR @ step 142000: 35.679 dB
+
+VAL PSNR @ step 144000: 35.789 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 145000)
+
+VAL PSNR @ step 146000: 35.588 dB
+
+VAL PSNR @ step 148000: 36.032 dB
+
+VAL PSNR @ step 150000: 36.049 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 150000)
+
+VAL PSNR @ step 152000: 35.499 dB
+
+VAL PSNR @ step 154000: 35.943 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 155000)
+
+VAL PSNR @ step 156000: 35.988 dB
+
+VAL PSNR @ step 158000: 35.843 dB
+
+VAL PSNR @ step 160000: 36.005 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 160000)
+
+VAL PSNR @ step 162000: 35.773 dB
+
+VAL PSNR @ step 164000: 35.456 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 165000)
+
+VAL PSNR @ step 166000: 36.036 dB
+
+VAL PSNR @ step 168000: 35.887 dB
+
+VAL PSNR @ step 170000: 36.047 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 170000)
+
+VAL PSNR @ step 172000: 36.079 dB
+
+VAL PSNR @ step 174000: 35.777 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 175000)
+
+VAL PSNR @ step 176000: 35.640 dB
+
+VAL PSNR @ step 178000: 36.052 dB
+
+VAL PSNR @ step 180000: 35.829 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 180000)
+
+VAL PSNR @ step 182000: 35.652 dB
+
+VAL PSNR @ step 184000: 36.090 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 185000)
+
+VAL PSNR @ step 186000: 35.696 dB
+
+VAL PSNR @ step 188000: 35.910 dB
+
+VAL PSNR @ step 190000: 35.596 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 190000)
+
+VAL PSNR @ step 192000: 35.395 dB
+
+VAL PSNR @ step 194000: 35.684 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 195000)
+
+VAL PSNR @ step 196000: 36.040 dB
+
+VAL PSNR @ step 198000: 35.643 dB
+
+VAL PSNR @ step 200000: 36.069 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 200000)
+
+VAL PSNR @ step 202000: 35.856 dB
+
+VAL PSNR @ step 204000: 35.827 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 205000)
+
+VAL PSNR @ step 206000: 35.778 dB
+
+VAL PSNR @ step 208000: 35.712 dB
+
+VAL PSNR @ step 210000: 35.679 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 210000)
+
+VAL PSNR @ step 212000: 36.382 dB
+
+VAL PSNR @ step 214000: 35.587 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 215000)
+
+VAL PSNR @ step 216000: 36.009 dB
+
+VAL PSNR @ step 218000: 35.767 dB
+
+VAL PSNR @ step 220000: 35.813 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 220000)
+
+VAL PSNR @ step 222000: 35.649 dB
+
+VAL PSNR @ step 224000: 35.758 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 225000)
+
+VAL PSNR @ step 226000: 35.546 dB
+
+VAL PSNR @ step 228000: 35.834 dB
+
+VAL PSNR @ step 230000: 36.179 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 230000)
+
+VAL PSNR @ step 232000: 36.225 dB
+
+VAL PSNR @ step 234000: 35.902 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 235000)
+
+VAL PSNR @ step 236000: 35.954 dB
+
+VAL PSNR @ step 238000: 35.593 dB
+
+VAL PSNR @ step 240000: 36.080 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 240000)
+
+VAL PSNR @ step 242000: 35.761 dB
+
+VAL PSNR @ step 244000: 35.628 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 245000)
+
+VAL PSNR @ step 246000: 35.759 dB
+
+VAL PSNR @ step 248000: 35.621 dB
+
+VAL PSNR @ step 250000: 35.943 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 250000)
+
+VAL PSNR @ step 252000: 36.104 dB
+
+VAL PSNR @ step 254000: 36.068 dB
+
+Checkpoint: trained_nets/knee/LPDS_MRI_Recon_R10/net.ckpt (step 255000)
+
+VAL PSNR @ step 256000: 36.332 dB

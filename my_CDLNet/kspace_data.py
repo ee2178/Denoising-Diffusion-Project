@@ -68,7 +68,7 @@ class MRIKSpaceDataset(data.Dataset):
 
         return kspace, smaps, image
 
-def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, scaling_fac = 1e6, num_workers = 1, modality = 'brain'):
+def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8,scaling_fac = 1e6, num_workers = 1, modality = 'brain'):
     # Don't perform random transformations if in test phase
     if test:
         xfm = None
@@ -78,7 +78,7 @@ def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, c
         #                          transforms.RandomVerticalFlip(),
         #                          ])
         xfm = None
-    return data.DataLoader(MRIKSpaceDataset(dir_list, kspace_dir_list, xfm, scaling_fac, modality = modality),
+    return data.DataLoader(MRIKSpaceDataset(dir_list, kspace_dir_list, xfm, scaling_fac, modality = modality, start_slice = start_slice, end_slice = end_slice),
                            batch_size = batch_size,
                            drop_last  = (not test),
                            shuffle    = (not test))
@@ -92,6 +92,8 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                   crop_size  = 128,
                   batch_size = [1,1,1],
                   load_color = False, 
+                  start_slice = 0,
+                  end_slice = 8,
                   scaling_fac = 1e6,
                   num_workers = 1,
                   modality = 'brain'):
@@ -105,6 +107,8 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                             load_color, 
                                             crop_size=crop_size, 
                                             test=False, 
+                                            start_slice = start_slice,
+                                            end_slice = end_slice,
                                             scaling_fac = scaling_fac,
                                             num_workers = num_workers,
                                             modality = modality),
@@ -112,7 +116,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                             val_kspace_path_list,
                                             batch_size[1], 
                                             load_color, 
-                                            test=True, 
+                                            test=True,
+                                            start_slice = start_slice,
+                                            end_slice = end_slice,
                                             scaling_fac = scaling_fac,
                                             num_workers = num_workers,
                                             modality = modality),
@@ -120,7 +126,9 @@ def get_fit_loaders(trn_path_list =['CBSD432'],
                                             tst_kspace_path_list,
                                             batch_size[2], 
                                             load_color, 
-                                            test=True, 
+                                            test=True,
+                                            start_slice = start_slice,
+                                            end_slice = end_slice,
                                             scaling_fac = scaling_fac,
                                             num_workers = num_workers,
                                             modality = modality)}
