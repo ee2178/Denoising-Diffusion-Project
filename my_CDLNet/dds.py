@@ -3,7 +3,7 @@ import torch.fft as fft
 import torch.nn as nn
 import numpy as np
 
-from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor, espirit
+from mri_utils import batched_mri_encoding, batched_mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor, espirit
 from solvers import conj_grad
 from pprint import pprint
 from functools import partial
@@ -47,8 +47,8 @@ class DDS(nn.Module):
         sig_t_vec = self.prep_noise_schedule(mode = sched)
 
         # Define MRI operators
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         
         # Compute alphas from sigmas
         alpha_bar_vec = 1/(1+sig_t_vec**2)
@@ -57,8 +57,8 @@ class DDS(nn.Module):
         alpha_vec[1:] = alpha_bar_vec[1:]/alpha_bar_vec[:-1]
 
         # Initialize initial x
-        x_t = torch.randn(y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
-        x_t = x_t[None, None, :, :]
+        x_t = torch.randn(y.shape[0], 1, y.shape[-2], y.shape[-1], dtype = torch.cfloat, device = y.device)
+        x_t = x_t
 
         # Preselect proximal weight, let's forget any type of lambda scaling
         rho = self.gamma
@@ -71,7 +71,7 @@ class DDS(nn.Module):
         #    while sigma_t >= self.sigma_L:
             for t in range(len(sig_t_vec)-1):               
                 # Compute denoised estimate
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                x_hat_t, _ = self.denoiser(x_t, sigma_t)
                 # Get noise level estimate
                 sigma_t = sig_t_vec[t]
                 # Estimate error
@@ -102,6 +102,6 @@ class DDS(nn.Module):
                 saveimg(x_t, fname)
         # Final tweedie correction
         # We know, now, sigma_t = sigma_L. So take one final step without data consistency 
-        x_hat_t, _ = self.denoiser(x_t, sig_t_vec[-1]*255.)
+        x_hat_t, _ = self.denoiser(x_t, sig_t_vec[-1])
         x_t = x_t + sig_t_vec[-1]**2*(x_hat_t-x_t)
         return x_t

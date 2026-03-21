@@ -87,8 +87,9 @@ def eval_immap( immap,      # ImMAP class
         )
         '''
     elif mode == 'DDS':       
+        '''
         out = dds.forward(
-            mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
+            mask*kspace_white['data'], kspace_white['sigma'].max(), mask, kspace_white['smaps'],
             None, verbose=True, sched = 'eero'
         )
         out = kspace_white['zinv']*out
@@ -97,7 +98,7 @@ def eval_immap( immap,      # ImMAP class
             kspace_masked, noise_level, mask, smaps,
             None, verbose=True
         )
-        '''
+        
     else:
         raise ValueError(f"Unknown mode: {mode}")
     # out comes as 4D.
@@ -163,7 +164,7 @@ def prep_data(  kspace_fname,       # Path to kspace
     mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = accel, acs_lines = acs)
 
     # Send to GPU
-    gnd_truth = torch.from_numpy(gnd_truth).to(device)
+    gnd_truth = torch.from_numpy(gnd_truth).to(device)*scale_fac
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
     kspace = kspace.to(device)*scale_fac
@@ -225,8 +226,9 @@ def main():
     immap = ImMAP(net, lam = 8)
     dds = DDS(net)
     # Generate brain mask 
-    modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
+    # modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
     # modes = ['2','2-WS']
+    modes = ['DDS']
     immap_outs = []
     for mode in modes:
         immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
