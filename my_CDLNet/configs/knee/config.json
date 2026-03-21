@@ -14,22 +14,22 @@
 },
 "train": {
 	"loaders": {
-		"batch_size": 32,
+		"batch_size": 10,
 		"crop_size": 128,
 		"trn_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train"],
 		"val_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val"],
 		"tst_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test"],
 		"load_color": false,
 		"start_slice": 10,
-		"end_slice": 25,
-        "scaling_fac":2e3,
+		"end_slice": 20,
+        "scaling_fac":4e3,
         "num_workers": 14,
         "brain": false,
         "center_crop": 320
     },
 	"fit": {
 		"epochs": null,
-		"noise_std": [0,126],
+		"noise_std": [0, 0.5],
 		"val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 5,

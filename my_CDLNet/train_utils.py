@@ -16,7 +16,7 @@ def awgn(input, noise_std, dist = 'uniform'):
     y: clean input image
     noise_std: (tuple) noise_std of batch size N is uniformly sampled 
                 between noise_std[0] and noise_std[1]. Expected to be in interval
-                [0,255]
+                [0,1]
     """
 
     if not isinstance(noise_std, (list, tuple)):
@@ -45,7 +45,7 @@ def awgn(input, noise_std, dist = 'uniform'):
         y = torch.asin(x)
 
         # Scale to [0, 1]
-        sigma = (y)/(math.pi/2)*255.
-    return input + torch.randn_like(input) * (sigma/255.), sigma
+        sigma = (y)/(math.pi/2)
+    return input + torch.randn_like(input) * (sigma), sigma
 
 

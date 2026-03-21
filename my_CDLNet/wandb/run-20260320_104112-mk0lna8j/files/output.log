@@ -1,0 +1,25 @@
+fit: using device cuda:0
+TRAIN:   0%|          | 0/300000 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 390, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 136, in fit
+    img_recon,_ = net.forward_double_noise(
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/model.py", line 321, in forward_double_noise
+    yp, params = pre_process(EHy, self.s, mask = 1)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/model_utils.py", line 51, in pre_process
+    pad = calc_pad_2D(*x.shape[2:], stride)
+TypeError: calc_pad_2D() takes 3 positional arguments but 4 were given
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 390, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 136, in fit
+    img_recon,_ = net.forward_double_noise(
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/model.py", line 321, in forward_double_noise
+    yp, params = pre_process(EHy, self.s, mask = 1)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/model_utils.py", line 51, in pre_process
+    pad = calc_pad_2D(*x.shape[2:], stride)
+TypeError: calc_pad_2D() takes 3 positional arguments but 4 were given

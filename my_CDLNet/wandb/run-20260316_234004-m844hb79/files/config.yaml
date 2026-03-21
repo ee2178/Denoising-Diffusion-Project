@@ -1,0 +1,170 @@
+_wandb:
+    value:
+        cli_version: 0.25.1
+        e:
+            hqgbfazcss2d6a28lauj82b39wm2enqg:
+                args:
+                    - configs/knee/immap2p5_R6_config.json
+                codePath: my_CDLNet/train_mri_recon.py
+                codePathLocal: train_mri_recon.py
+                cpu_count: 80
+                cpu_count_logical: 80
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "83818971136"
+                        used: "28389871616"
+                email: ee2178@nyu.edu
+                executable: /home/ee2178/scratch/ee2178/miniconda3/envs/env/bin/python3
+                git:
+                    commit: fdab4c8305b79c569f7f0f304e264883e43149a9
+                    remote: git@github.com:ee2178/Denoising-Diffusion-Project.git
+                gpu: NVIDIA A100-SXM4-80GB
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A100-SXM4-80GB
+                      uuid: GPU-70d07bb1-0e5c-4662-9050-16f12ebc00bc
+                host: ga039.hpc.nyu.edu
+                memory:
+                    total: "1081288478720"
+                os: Linux-5.14.0-570.12.1.el9_6.x86_64-x86_64-with-glibc2.34
+                program: /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py
+                python: CPython 3.9.25
+                root: /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet
+                slurm:
+                    array_job_id: "4388271"
+                    array_task_count: "5"
+                    array_task_id: "2"
+                    array_task_max: "4"
+                    array_task_min: "0"
+                    array_task_step: "1"
+                    cluster_name: torch
+                    conf: /opt/slurm/data/slurmd/conf-cache/slurm.conf
+                    cpus_on_node: "16"
+                    cpus_per_task: "16"
+                    gpus_on_node: "1"
+                    gtids: "0"
+                    job_account: torch_pr_89_tandon_advanced
+                    job_cpus_per_node: "16"
+                    job_end_time: "1773891556"
+                    job_gid: "3711906"
+                    job_gpus: "2"
+                    job_id: "4388276"
+                    job_name: LPDSNet-Knee
+                    job_nodelist: ga039
+                    job_num_nodes: "1"
+                    job_partition: a100_tandon
+                    job_qos: gpu48
+                    job_start_time: "1773718756"
+                    job_uid: "3711906"
+                    job_user: ee2178
+                    jobid: "4388276"
+                    jobtmp: /state/partition1/job-4388276
+                    localid: "0"
+                    mem_per_node: "65536"
+                    nnodes: "1"
+                    nodeid: "0"
+                    nodelist: ga039
+                    nprocs: "1"
+                    ntasks: "1"
+                    ntasks_per_node: "1"
+                    oom_kill_step: "0"
+                    prio_process: "0"
+                    procid: "0"
+                    script_context: prolog_task
+                    submit_dir: /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/slurm
+                    submit_host: torch-login-3.hpc-infra.svc.cluster.local
+                    task_pid: "2864111"
+                    tasks_per_node: "1"
+                    tmpdir: /state/partition1/job-4388276
+                    topology_addr: ga039
+                    topology_addr_pattern: node
+                    tres_per_task: cpu=16
+                startedAt: "2026-03-17T03:40:04.251417Z"
+                writerId: hqgbfazcss2d6a28lauj82b39wm2enqg
+        m: []
+        python_version: 3.9.25
+        t:
+            "1":
+                - 1
+                - 41
+            "2":
+                - 1
+                - 41
+            "3":
+                - 1
+                - 16
+            "4": 3.9.25
+            "5": 0.25.1
+            "12": 0.25.1
+            "13": linux-x86_64
+model:
+    value:
+        C: 1
+        K: 30
+        M: 169
+        P: 7
+        adaptive: true
+        e2e_diff: true
+        s: 2
+mri:
+    value:
+        R: 6
+        acs_lines: 24
+paths:
+    value:
+        ckpt: null
+        save: trained_nets/knee/LPDS_ImMAP2p5_R6
+train:
+    value:
+        fit:
+            backtrack_thresh: 5
+            clip_grad: 0.05
+            demosaic: false
+            denoiser_args_path: eval_config.json
+            epochs: null
+            image_noise_std:
+                - 0
+                - 126
+            max_steps: 300000
+            mcsure: false
+            noise_dist: cosine
+            noise_std:
+                - 10
+                - 13
+            save_every: 5000
+            save_freq: 5
+            val_every: 2000
+            val_freq: 50
+            verbose: true
+            x_init: true
+        loaders:
+            batch_size: 1
+            crop_size: 256
+            end_slice: 25
+            modality: knee
+            num_workers: 14
+            scaling_fac: 4000
+            start_slice: 15
+            trn_kspace_path_list:
+                - ../../datasets/fastmri/knee/multicoil_train
+            trn_path_list:
+                - ../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train
+            tst_kspace_path_list:
+                - ../../datasets/fastmri/knee/multicoil_test_v2
+            tst_path_list:
+                - ../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test
+            val_kspace_path_list:
+                - ../../datasets/fastmri/knee/multicoil_val
+            val_path_list:
+                - ../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val
+        opt:
+            lr: 0.0005
+        sched:
+            gamma: 0.95
+            step_size: 50
+type:
+    value: LPDSNet

@@ -1,0 +1,2 @@
+fit: using device cuda:0
+TRAIN:   0%|          | 561/300000 [14:44<131:40:36,  1.58s/it]

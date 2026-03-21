@@ -4,6 +4,7 @@ from pprint import pprint
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 
 from model import CDLNet, LPDSNet
 from train_utils import awgn
@@ -19,6 +20,9 @@ def main(args):
     loaders = get_fit_loaders(**train_args['loaders'])
     net, opt, sched, epoch0 = init_model(args, device=device)
     
+    wandb.init(project="lpds_denoiser", config=args)
+    wandb.watch(net, log="gradients", log_freq=2000)
+
     fit(net, 
         opt, 
         loaders,
@@ -28,150 +32,6 @@ def main(args):
         device      = device,
         **train_args['fit'],
         epoch_fun = lambda epoch_num: save_args(args, epoch_num))
-'''    
-def fit(net, opt, loaders, 
-        sched = None,
-        epochs = 1, 
-        device = torch.device("cpu"), 
-        save_dir = None, 
-        start_epoch = 1,
-        clip_grad = 1,
-        noise_std = 25,
-        demosaic = False, 
-        verbose = True, 
-        val_freq = 1,
-        save_freq = 1,
-        epoch_fun = None, 
-        mcsure = False,
-        noise_dist = 'uniform',
-        backtrack_thresh = 5):
-    
-    # Train the model
-    print(f"fit: using device {device}")
-    
-    # Noise standard should be prescribed as a range
-    if not type(noise_std) in [list, tuple]:
-        noise_std = (noise_std, noise_std)
-        
-    ckpt_path = os.path.join(save_dir, '0.ckpt')
-    save_ckpt(ckpt_path, net, 0, opt, sched)
-
-    top_psnr = {"train": 0, "val": 0, "test": 0} # for backtracking
-    epoch = start_epoch
-    
-    # start at the correct epoch, iterate up until number of epochs prescribed
-    while epoch < start_epoch + epochs:
-        # separate based on training phase
-        for phase in ['train', 'val', 'test']:
-            # only update params if we are in the training phase
-            net.train() if phase == 'train' else net.eval()
-            if epoch != epochs and phase == 'test':
-                continue
-            if phase == 'val' and epoch%val_freq != 0:
-                continue
-            if phase in ['val', 'test']:
-                phase_nstd = (noise_std[0]+noise_std[1])/2.0
-            else:
-                phase_nstd = noise_std
-            psnr = 0
-            t = tqdm(iter(loaders[phase]), desc=phase.upper()+'-E'+str(epoch), dynamic_ncols=True)
-            for itern, batch in enumerate(t):
-                batch = batch.to(device)
-                # apply mask if need to demosaic 
-                mask = 1
-                batch = batch[:, None, :, :] # Insert channel dim
-                
-                # apply noise 
-                noisy_batch, sigma_n = awgn(batch, phase_nstd, dist=noise_dist)
-                obsrv_batch = mask * noisy_batch
-                # Reset gradients
-                opt.zero_grad()
-                with torch.set_grad_enabled(phase == 'train'):
-                    # Make predictions per batch
-                    batch_hat, _ = net(obsrv_batch, sigma_n, mask=mask)
-                    # supervised or unsupervised (MCSURE) loss during training
-                    if mcsure and phase == "train":
-                        h = 1e-3
-                        # Implementation of mcsure loss
-                        b = torch.randn_like(obsrv_batch)
-                        batch_hat_b, _ = net(obsrv_batch.clone() + h*b, sigma_n, mask=mask)
-                        # assume you have a good estimator for sigma_n
-                        div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
-                        loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
-                    else:
-                        # if not mcsure then mse 
-                        # SCALE THE LOSS ACCORDING TO THE NOISE!!
-                        mse = torch.mean(torch.abs(batch - batch_hat)**2)
-                        # VERY IMPORTANT TO CUT SCALING DOWN TO [0, 1]
-                        loss = torch.mean((sigma_n/255.+1e-3)**(-2)*torch.abs(batch - batch_hat)**2)
-                        
-                    if phase == 'train':
-                        # Get gradients
-                        loss.backward()
-                        # Clip gradients
-                        if clip_grad is not None:
-                            nn.utils.clip_grad_norm_(net.parameters(), clip_grad)
-                        # Apply gradient update
-                        opt.step()
-                        # method found in the CDLNet class, projects weights onto unit ball
-                        net.project()
-                loss = loss.item()
-                mse = mse.item()
-                if verbose:
-                    total_norm = grad_norm(net.parameters())
-                    t.set_postfix_str(f"loss={loss:.1e}|gnorm={total_norm:.1e}")
-                psnr = psnr - 10*np.log10(mse)
-            
-            psnr = psnr/(itern+1)
-            print(f"{phase.upper()} PSNR: {psnr:.3f} dB")
-
-            if psnr > top_psnr[phase]:
-                top_psnr[phase] = psnr
-            # backtracking check
-            elif (psnr + backtrack_thresh < top_psnr[phase]) or np.isnan(loss) or np.isinf(loss):
-                break
-
-            with open(os.path.join(save_dir, f'{phase}.txt'),'a') as psnr_file:
-                psnr_file.write(f'{psnr:.3f}, ')
-
-        if (psnr + backtrack_thresh < top_psnr[phase]) or np.isnan(loss) or np.isinf(loss):
-            ckpt_path = os.path.join(save_dir, 'net.ckpt')
-            if epoch <= save_freq:  
-                ckpt_path = os.path.join(save_dir, '0.ckpt')
-            print(f"Loss has diverged. Backtracking to {ckpt_path} ...")
-
-            with open(os.path.join(save_dir, f'backtrack.txt'),'a') as psnr_file:
-                psnr_file.write(f'{epoch}  ')
-
-            if epoch % save_freq == 0:
-                epoch = epoch - save_freq
-            else:
-                epoch = epoch - epoch%save_freq
-
-            old_lr = np.array(getlr(opt))
-            net, _, _, _ = load_ckpt(ckpt_path, net, opt, sched)
-            new_lr = old_lr * 0.8
-            setlr(opt, new_lr)
-            print("Updated Learning Rate(s):", new_lr)
-            epoch = epoch + 1
-            continue
-
-        if sched is not None:
-            sched.step()
-            if hasattr(sched, "step_size") and epoch % sched.step_size == 0:
-                print("Updated Learning Rate(s): ")
-                print(getlr(opt))
-
-        if epoch % save_freq == 0:
-            ckpt_path = os.path.join(save_dir, 'net.ckpt')
-            print('Checkpoint: ' + ckpt_path)
-            save_ckpt(ckpt_path, net, epoch, opt, sched)
-
-            if epoch_fun is not None:
-                epoch_fun(epoch)
-
-        epoch = epoch + 1
-'''
 def fit(net, opt, loaders,
         sched=None,
         epochs=1,
@@ -188,6 +48,7 @@ def fit(net, opt, loaders,
         mcsure=False,
         noise_dist='uniform',
         backtrack_thresh=5,
+        log_every = 50,
         max_steps=None,
         val_every=2000,
         save_every=5000):
@@ -248,9 +109,10 @@ def fit(net, opt, loaders,
             div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
             loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
         else:
-            mse = torch.mean(torch.abs(batch-batch_hat)**2)
-            loss = torch.mean((sigma_n/255.+1e-3)**(-2)*torch.abs(batch-batch_hat)**2)
-
+            mse = torch.mean((batch.abs()-batch_hat.abs())**2)
+            #loss = torch.mean((sigma_n/255.+1e-4)**(-2)*torch.abs(batch-batch_hat)**2)
+            # Go back to mse loss
+            loss = mse
         loss.backward()
 
         if clip_grad is not None:
@@ -268,22 +130,20 @@ def fit(net, opt, loaders,
         # -----------------------
         # Update tqdm metrics
         # -----------------------
-        if verbose and step % 10 == 0:
-            total_norm = grad_norm(net.parameters())
-            pbar.set_postfix({
-                "loss": f"{loss.item():.2e}",
-                "gnorm": f"{total_norm:.2e}",
-                "lr": f"{getlr(opt)[0]:.2e}"
-            })
-
+        if verbose and step % log_every == 0:
+            mse = torch.mean(torch.abs(batch-batch_hat)**2)
+            psnr = -10*np.log10(mse.item() + 1e-12)
+            wandb.log({
+                "train/loss": loss.item(),
+                "train/psnr": psnr,
+                "lr": getlr(opt)[0],
+            }, step=step)
         # ---------------------
         # Validation
         # ---------------------
         if step % val_every == 0:
-
             net.eval()
             psnr = 0
-
             with torch.no_grad():
                 for itern, batch in enumerate(
                         tqdm(loaders["val"],
@@ -302,18 +162,35 @@ def fit(net, opt, loaders,
                     batch_hat,_ = net(obsrv_batch, sigma_n, mask=1)
 
                     mse = torch.mean(torch.abs(batch-batch_hat)**2)
-                    psnr += -10*np.log10(mse.item())
+                    psnr += -10*np.log10(mse.item()+1e-12)
 
-            psnr /= (itern+1)
+                    if itern == 0:
+                        gt = batch[0].abs().detach().cpu().numpy()
+                        noisy = noisy_batch[0].abs().detach().cpu().numpy()
+                        recon = batch_hat[0].abs().detach().cpu().numpy()
 
-            print(f"\nVAL PSNR @ step {step}: {psnr:.3f} dB")
+                        # normalize for visibility
+                        gt = gt / (gt.max() + 1e-8)
+                        noisy = noisy / (noisy.max() + 1e-8)
+                        recon = recon / (recon.max() + 1e-8)
+                        
+                        gt = np.squeeze(gt)
+                        noisy = np.squeeze(noisy)
+                        recon = np.squeeze(recon)
 
+                        panel = np.concatenate([noisy, recon, gt], axis=1)
+
+                        wandb.log({
+                            "denoiser_panel": wandb.Image(
+                            panel,
+                            caption="Input (Noisy) | Denoised | Ground Truth"
+                            )
+                        }, step=step)
+                psnr /= (itern+1)
             if psnr > top_psnr["val"]:
                 top_psnr["val"] = psnr
             elif psnr + backtrack_thresh < top_psnr["val"]:
-
                 print("Validation dropped — backtracking")
-
                 ckpt_path = os.path.join(save_dir,"net.ckpt")
                 net,_,_,_ = load_ckpt(ckpt_path,net,opt,sched)
 
@@ -448,15 +325,3 @@ if __name__ == "__main__":
     pprint(args)
     args_file.close()
     main(args)    
-
-if __name__ == "__main__":
-    """ Load arguments dictionary from json file to pass to main.
-    """
-    if len(sys.argv)<2:
-        print('ERROR: usage: train.py [path/to/arg_file.json]')
-        sys.exit(1)
-    args_file = open(sys.argv[1])
-    args = json.load(args_file)
-    pprint(args)
-    args_file.close()
-    main(args)

@@ -1,0 +1,17 @@
+fit: using device cuda:0
+TRAIN:   0%|          | 50/300000 [01:18<128:23:17,  1.54s/it]Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 313, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 135, in fit
+    "train/psnr": psnr,
+UnboundLocalError: local variable 'psnr' referenced before assignment
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 313, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 135, in fit
+    "train/psnr": psnr,
+UnboundLocalError: local variable 'psnr' referenced before assignment

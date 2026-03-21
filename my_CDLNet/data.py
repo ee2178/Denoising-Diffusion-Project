@@ -36,6 +36,8 @@ class MRIDataset(data.Dataset):
             slice = np.random.randint(self.start_slice, self.end_slice)
             with h5py.File(self.image_paths[idx]) as f:
                 image = f['image'][slice, :, :][np.newaxis, :, :]
+                # We can return a mask, but this is only meaningful if we have espirit maps. 
+                # Actually forget the mask, we would have to mess around  
             # Convert image to tensor
             image = torch.from_numpy(image)
             # Image is a complex tensor, apply transformations to real and imaginary parts

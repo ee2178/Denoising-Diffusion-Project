@@ -51,7 +51,7 @@ def eval_immap( immap,      # ImMAP class
     elif mode == '2':
         # In mode 2 let's using whitening kspace first
         out = immap.forward_2(
-            mask*kspace_white['data'][0], kspace_white['sigma'].max(), mask, kspace_white['smaps'][0],
+            mask*kspace_white['data'], kspace_white['sigma'].max(), mask, kspace_white['smaps'],
             None, verbose=True
         )
         out = kspace_white['zinv']*out
@@ -100,6 +100,8 @@ def eval_immap( immap,      # ImMAP class
         '''
     else:
         raise ValueError(f"Unknown mode: {mode}")
+    # out comes as 4D.
+
     # For ssim, try just zeroing out all the nonmasked pixels?
     # Grab furthest ends of each mask and turn into a square i guess
     nnzs = torch.nonzero(brain_mask*1)
@@ -112,12 +114,11 @@ def eval_immap( immap,      # ImMAP class
 
     out = out * brain_mask # Apply the brain mask just to suppress background
 
-    xp, yp = joint_normalize(gnd_truth.abs(), out[0,0].abs())
+    xp, yp = joint_normalize(gnd_truth.abs(), torch.squeeze(out).abs())
     psnr_ = psnr(xp[brain_mask], yp[brain_mask])
     ssim_ = ssim(xp[None, None, min_x:max_x, min_y:max_y], yp[None, None, min_x:max_x, min_y:max_y])
     print(f"ImMAP{mode} PSNR:{psnr_}")
     print(f"ImMAP{mode} SSIM:{ssim_}")
-
     if save == True:
         saveimg(out, "immap"+str(mode)+"out.png", contrast=True)
     return out
@@ -148,9 +149,9 @@ def prep_data(  kspace_fname,       # Path to kspace
     smaps_fname = os.path.join(smap_root, fname)
 
     with h5py.File(smaps_fname) as f:
-        smaps = f['smaps'][:, :, :, :]
-        smaps = smaps[slice, :, :, :]
-        # gnd_truth = f['image'][slice, :, :]
+        x = f['image'][()]
+        smaps = f['smaps'][slice, :, :, :]
+        gnd_truth = f['image'][slice, :, :]
 
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][slice, :, :, :]
@@ -162,6 +163,7 @@ def prep_data(  kspace_fname,       # Path to kspace
     mask = make_acc_mask(shape = (smaps.shape[1], smaps.shape[2]), accel = accel, acs_lines = acs)
 
     # Send to GPU
+    gnd_truth = torch.from_numpy(gnd_truth).to(device)
     smaps = smaps.to(device)
     # Scale kspace and send to GPU
     kspace = kspace.to(device)*scale_fac
@@ -172,16 +174,18 @@ def prep_data(  kspace_fname,       # Path to kspace
     # We need to use espirit maps to do coil combination
     volume_kspace = torch.from_numpy(volume_kspace)
     volume_kspace = volume_kspace.to(device)
-
-    espirit_smaps = torch.flip(espirit(mask*kspace[None]/scale_fac, acs_size=(acs, acs)), dims = (-2, -1))[0]
-    gnd_truth = (espirit_smaps.conj() * ifftc(kspace)).sum(dim=0)
     
-    brain_mask = torch.norm(espirit_smaps, dim = 0) != 0
-
+    # Our computed smaps are alredy espirit
+    # espirit_smaps = torch.flip(espirit(mask*kspace/scale_fac, acs_size=(acs, acs)), dims = (-2, -1))[0]
+    # gnd_truth = (espirit_smaps.conj() * ifftc(kspace)).sum(dim=1)
+    
+    brain_mask = torch.norm(smaps, dim = 0) != 0
     # Additionally return a whitened kspace 
-    kspace_white_dict = whiten(kspace[None], smaps = espirit_smaps[None])
-
-    return kspace, kspace_white_dict, smaps, espirit_smaps, mask, gnd_truth, brain_mask
+    # Add batch dim to kspace and smaps
+    kspace = kspace[None]
+    smaps = smaps[None, :, :, :]
+    kspace_white_dict = whiten(kspace, smaps = smaps)
+    return kspace, kspace_white_dict, smaps, mask, gnd_truth, brain_mask
 
 def main():
     # test on one specific sample
@@ -193,10 +197,12 @@ def main():
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_200_2000572.h5"
     # kspace_fname = "../../datasets/fastmri/brain/multicoil_val/file_brain_AXT2_205_2050160.h5"
     # MRI Params
-    accel = 6
+    accel = 10
     slice_ = 17
-    kspace, whitened_kspace, smaps, espirit_smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, slice = slice_, accel = accel, device = device)
-    saveimg(gnd_truth, "gndtruth.png", contrast=True)
+    kspace, whitened_kspace, smaps, mask, gnd_truth, brain_mask = prep_data(kspace_fname, scale_fac = 4e3, slice = slice_, accel = accel, device = device)
+    
+    save_extra = False
+
     # Load networks
     net = load_model('configs/knee/eval_config.json', device = device)
     net_immap2p5 = load_model('configs/knee/immap2p5_R'+str(accel)+'_config.json', device = device)
@@ -206,22 +212,24 @@ def main():
     # Add noise in multicoil image space if we want
     noise_level = 0.00
     # mri_awgn returns a masked kspace with noise added in the multicoil image domain
-    noisy_kspace, _ = mri_awgn(gnd_truth, mask, espirit_smaps, noise_level)
-    e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level*255., mask = mask[None], smaps = espirit_smaps[None], mri = True)
+    noisy_kspace, _ = mri_awgn(gnd_truth, mask, smaps, noise_level)
+    e2e_recon, _ = lpdsnet_e2e(noisy_kspace, noise_level, mask = mask, smaps = smaps, mri = True)
 
     # Save the e2erecon for comparison
-    saveimg(e2e_recon, "e2erecon.png", contrast=True)
+    if save_extra is True:
+        saveimg(gnd_truth, "gndtruth.png", contrast=True)
+        saveimg(e2e_recon, "e2erecon.png", contrast=True)
 
     # Init ImMAP class
     # We may want to try a bunch of different lambda values:
-    immap = ImMAP(net, lam = 10)
+    immap = ImMAP(net, lam = 8)
     dds = DDS(net)
     # Generate brain mask 
     modes = ['2', '2.5', '2-WS', '2.5-WS', 'DDS']
     # modes = ['2','2-WS']
     immap_outs = []
     for mode in modes:
-        immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, espirit_smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
+        immap_outs.append(eval_immap(immap, dds, noisy_kspace, whitened_kspace, smaps, noise_level, mask, brain_mask, mode, gnd_truth, net_immap2p5, e2e_recon, save=True)) 
 
 if __name__ == "__main__":
     main()

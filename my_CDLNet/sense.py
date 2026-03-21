@@ -42,7 +42,6 @@ def main(args):
     with h5py.File(kspace_fname) as f:
         kspace = f['kspace'][()]
         print(f.attrs['acquisition'])
-
     if args.slice is None:
         slice = np.arange(0, kspace.shape[0], 1)
     else:

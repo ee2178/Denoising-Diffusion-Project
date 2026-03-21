@@ -57,6 +57,8 @@ class MRIKSpaceDataset(data.Dataset):
         with h5py.File(self.image_paths[idx]) as f:
             image = f['image'][slice][np.newaxis, :, :]
             smaps = f['smaps'][slice]
+            # Under this indexing, smaps come out as C x H x W, so get a mask by summing along the C dim and then seeing what is > 0
+            mask = np.sum(np.abs(smaps), axis = 0) > 0
         # Find corresponding kspace
         with h5py.File(self.kspace_paths[idx]) as f:
             kspace = f['kspace'][slice]
@@ -65,8 +67,9 @@ class MRIKSpaceDataset(data.Dataset):
         image = torch.from_numpy(image)*self.scaling_fac
         smaps = torch.from_numpy(smaps)
         kspace = torch.from_numpy(kspace)*self.scaling_fac
+        mask = torch.from_numpy(mask)[None, :, :] # Add a 1 dimensional channel axis
 
-        return kspace, smaps, image
+        return kspace, smaps, image, mask
 
 def get_data_loader(dir_list, kspace_dir_list, batch_size=1, load_color=False, crop_size=None, test=True, start_slice = 0, end_slice = 8,scaling_fac = 1e6, num_workers = 1, modality = 'brain'):
     # Don't perform random transformations if in test phase

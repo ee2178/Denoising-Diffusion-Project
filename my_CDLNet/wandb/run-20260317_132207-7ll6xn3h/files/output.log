@@ -1,0 +1,31 @@
+fit: using device cuda:0
+TRAIN:   1%|          | 1999/300000 [19:56<53:33:50,  1.55it/s]/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/integration/torch/wandb_torch.py:199: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647350383/work/aten/src/ATen/native/Copy.cpp:308.)
+  flat = flat.type(torch.cuda.FloatTensor)
+TRAIN:   1%|          | 2000/300000 [19:57<59:24:Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 387, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 243, in fit
+    "reconstruction_panel": wandb.Image(
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 280, in __init__
+    self._initialize_from_data(data_or_path, mode, file_type, normalize)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 437, in _initialize_from_data
+    mode = mode or self.guess_mode(data, file_type)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 623, in guess_mode
+    raise ValueError(
+ValueError: Un-supported shape for image conversion [3, 640, 372]
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 387, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 243, in fit
+    "reconstruction_panel": wandb.Image(
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 280, in __init__
+    self._initialize_from_data(data_or_path, mode, file_type, normalize)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 437, in _initialize_from_data
+    mode = mode or self.guess_mode(data, file_type)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/sdk/data_types/image.py", line 623, in guess_mode
+    raise ValueError(
+ValueError: Un-supported shape for image conversion [3, 640, 372]

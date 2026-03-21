@@ -1,0 +1,374 @@
+import torch 
+import torch.fft as fft
+import torch.nn.functional as F
+import math
+from typing import Tuple
+
+# Let us write a helper function to give us a DFT matrix for some N
+def dft_matrix(N):
+    # Generate a vector [0, 1, ..., N-1]
+    n = torch.linspace(0, N-1, N)
+    # Generate meshgrid based on n
+    Nx, Ny = torch.meshgrid(n, n)
+    W = Nx * Ny
+    # Turn our W matrix into a complex valued matrix with W as the imaginary components
+    W = torch.complex(torch.zeros_like(W), -2*torch.Tensor([math.pi])*W/N)
+    return torch.exp(W)
+
+def mri_awgn(x, acceleration_map, smaps, noise_std, kspace=False):
+    if kspace is False:
+        # Takes in a noise free ground truth, not kspace
+        x_coils = smaps[:, :]* x[None, :, :]
+    if kspace is True:
+        # Assume we take in a fully sampled kspace 
+        y = ifftc(x)
+        x_coils = smaps[:, :]* y[None, :, :]
+    if not isinstance(noise_std, (list, tuple)):
+        sigma = noise_std
+    elif isinstance(noise_std, (list, tuple)): # uniform sampling of sigma
+        sigma = noise_std[0] + \
+               (noise_std[1] - noise_std[0])*torch.rand(1, device=x.device)
+    x_coils_noisy = x_coils + sigma*torch.randn_like(x_coils)
+    y_coils = fftc(x_coils_noisy)
+    y_mask = y_coils * acceleration_map[None]
+    # Always return masked kspace
+    return y_mask, sigma
+
+def mri_encoding(x, acceleration_map, smaps):
+    # We take an acceleration_map to be a row-removed identity matrix corresponding to how many lines in kspace we keep [N x N]
+    # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]
+    x_coils = smaps* x[None, :, :]
+    # x_coils is C x N x N
+    y_coils = fftc(x_coils)
+    # y_coils is C x N x N
+    mask = acceleration_map
+    y_mask = y_coils * mask[None]
+    return y_mask
+
+
+def mri_decoding(y, acceleration_map, smaps):
+    # Apply mask to each channel of y
+    y_mask = y * acceleration_map[None]
+    # Apply ifft2
+    x_coils = ifftc(y_mask)
+    # Coil combination
+    x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
+    return x
+
+def batched_mri_encoding(x, mask, smaps):
+    # x         B x 1 x H x W
+    # smaps     B x C x H x W
+    # mask      B x 1 x H x W 
+    # Flatten x for einsum 
+    x_coils = smaps * x         # B x C x H x W
+    y_coils = fftc(x_coils)     # B x C x H x W 
+    y_mask = y_coils * mask     # B x C x H x W  
+    return y_mask
+
+def batched_mri_decoding(y, mask, smaps):
+    # y         B x C x H x W
+    # smaps     B x C x H x W
+    # mask      B x 1 x H x W
+    y_mask = mask * y           # B x C x H x W
+    x_coils = ifftc(y_mask)     # B x C x H x W
+    x = torch.sum(smaps.conj()*x_coils, dim = 1, keepdim = True) # B x 1 x H x W
+    return x
+
+
+def check_adjoint(E, EH, smaps):
+    x = torch.randn(smaps.shape[1], smaps.shape[2],  dtype = torch.cfloat)
+    x = x.to(smaps.device)
+    y = torch.randn_like(E(x))
+
+    # Check inner product <x, EH(y)>, <E(x), y>
+    ip1 = torch.sum(x.conj() * EH(y))
+    ip2 = torch.sum(E(x).conj() * y)
+
+    diff = ip1 - ip2
+    return diff, ip1, ip2
+
+def detect_acc_mask(y):
+    '''  
+    This function takes some sample image and detects the acceleration map.
+    Assume y is C x H x W, C the number of coils. 
+    '''
+    # Transpose to look at depleted columns, not rows
+    y = y.permute(0, 2, 1)
+    # Look along first column of coil image of y. Detect missing rows. 
+    nonzeros = torch.sum(y[0, :, :] != 0.0 + 0.0j, dim = -1)
+    mask = torch.diag((nonzeros > 0)*1)
+    # Returns H x W mask 
+    return mask
+
+
+def make_acc_mask_random(
+    shape,
+    accel,
+    acs_lines=24,
+    seed=None,
+    variable_density=False,
+    dim=1
+):
+    Ny, Nx = shape
+    N = shape[dim]
+    # Build empty mask
+    mask = torch.zeros((Ny, Nx), dtype=torch.float32)
+    # Determine how many samples to keep
+    n_total = N
+    n_acs = acs_lines
+    n_outer = n_total - n_acs
+    n_keep_outer = math.floor(n_outer / accel)
+    # Build PDF
+    if variable_density:
+        x = torch.linspace(-1, 1, N)
+        pdf = torch.exp(-4 * x**2)
+        pdf = pdf / pdf.sum()
+    else:
+        pdf = torch.ones(N) / N
+    # Remove ACS region from PDF
+    center = N // 2
+    half_acs = n_acs // 2
+    pdf[center - half_acs : center + half_acs] = 0
+    pdf = pdf / pdf.sum()
+
+    if seed is not None:
+        torch.manual_seed(seed)
+    # Draw outer samples
+    idx_outer = torch.multinomial(pdf, n_keep_outer, replacement=False)
+    idx_acs = torch.arange(center - half_acs, center + half_acs)
+    idx_keep = torch.cat([idx_outer, idx_acs]).unique()
+    # Fill mask
+    mask.index_fill_(dim, idx_keep, 1.0)
+    # ---- Create dense diagonal matrix ----
+    flat = mask.flatten()     # length Npix
+    # From flat, generate a matrix that we can use as a matrix multiply
+    D = torch.diag(flat[0:N])      # <-- full dense matrix
+    return D, mask
+
+def make_acc_mask(
+    shape,
+    accel,
+    acs_lines=24,
+    dim=1,
+    device = 'cpu',
+):
+    """
+    Uniform Cartesian subsampling mask with fully-sampled ACS.
+    shape: (Ny, Nx)
+    accel: acceleration factor (R)
+    acs_lines: number of fully-sampled center lines
+    dim: dimension along which to subsample (0 = y, 1 = x)
+    """
+    Ny, Nx = shape
+    N = shape[dim]
+    # Initialize empty mask
+    mask = torch.zeros((Ny, Nx), dtype=torch.float32, device = device)
+    # ACS region
+    center = N // 2
+    half_acs = acs_lines // 2
+    acs_start = center - half_acs
+    acs_end   = center + half_acs
+    # Uniform outer sampling
+    outer_idx = torch.arange(0, N, accel)
+    # Remove indices that fall inside ACS
+    outer_idx = outer_idx[
+        (outer_idx < acs_start) | (outer_idx >= acs_end)
+    ]
+    # ACS indices
+    acs_idx = torch.arange(acs_start, acs_end)
+    # Combine
+    idx_keep = torch.cat([outer_idx, acs_idx]).unique()
+    # Fill mask
+    mask.index_fill_(dim, idx_keep, 1.0)
+
+    # Right now mask is H x W, we don't want that. We want 1 x 1 x H x W, 4D
+    mask = mask.view(1, 1, mask.shape[-2], mask.shape[-1])
+    return mask
+
+
+def walsh_smaps(y: torch.Tensor, ks: int = 5, stride: int = 2):
+    """
+    Computes coil sensitivity maps using the Walsh method.
+    Args:
+        y: complex tensor of shape (B, C, H, W)
+        ks: patch size
+        stride: patch stride
+    Returns:
+        smaps: sensitivity maps of shape (B, C, H, W)
+    """
+    B, C, H, W = y.shape
+
+    # Handle unfolding for complex tensors
+    unfolded_real = F.unfold(y.real, kernel_size=(ks, ks), stride=stride)
+    unfolded_imag = F.unfold(y.imag, kernel_size=(ks, ks), stride=stride)
+    unfolded = torch.complex(unfolded_real, unfolded_imag)  # (B, C*ks*ks, Npatch)
+    Npatch = unfolded.shape[-1]
+
+    # (B, Npatch, C, ks*ks)
+    Yp = unfolded.view(B, C, ks*ks, Npatch).permute(0, 3, 2, 1)  # (B, Npatch, ks*ks, C)
+
+    # Covariance per patch
+    X = torch.matmul(Yp.transpose(-1, -2).conj(), Yp)  # (B, Npatch, C, C)
+
+    # SVD
+    U, S, Vh = torch.linalg.svd(X, full_matrices=False)
+    Q = U[..., 0]  # (B, Npatch, C)
+
+    # Reference coil alignment per batch
+    power = y.abs().pow(2).sum(dim=(2, 3))  # (B, C)
+    Cref = power.argmax(dim=1)
+    for b in range(B):
+        ref = Q[b, :, Cref[b]]
+        Q[b] *= ref.conj().sgn().unsqueeze(-1)
+
+    # Reshape to low-res maps
+    Hp = (H - ks) // stride + 1
+    Wp = (W - ks) // stride + 1
+    smaps_p = Q.permute(0, 2, 1).reshape(B, C, Hp, Wp)
+
+    # Upsample to full size
+    smaps_real = F.interpolate(smaps_p.real, size=(H, W), mode='bilinear', align_corners=False)
+    smaps_imag = F.interpolate(smaps_p.imag, size=(H, W), mode='bilinear', align_corners=False)
+    smaps = torch.complex(smaps_real, smaps_imag)
+
+    # Normalize
+    norm = smaps.abs().pow(2).sum(dim=1, keepdim=True)
+    smaps /= (norm.sqrt() + 1e-8)
+    return smaps.conj()
+
+def fftc(x, dim = (-2, -1), mode = 'ortho'):
+    return fft.fftshift(fft.fftn(fft.ifftshift(x, dim = dim), dim = dim, norm = mode), dim = dim)
+
+
+def ifftc(x, dim = (-2, -1), mode = 'ortho'):
+    return fft.fftshift(fft.ifftn(fft.ifftshift(x, dim = dim), dim = dim, norm = mode), dim = dim)
+
+def quant_tensor(x, n_bits, clipping_factor=1.0):
+    M = torch.max(torch.abs(x))
+    R = clipping_factor*M
+    # Clip to -R, R
+    x_clipped = torch.clip(x, -R, R)
+    # Compute the scale
+    s = 2**n_bits-2
+    scale = 2*R/s
+    # Get x_int
+    # Also enable STE
+    # x_int = torch.round(x_clipped/scale) + F.relu(x_clipped/scale) - F.relu(x_clipped/scale)
+    x_int = torch.round(x_clipped/scale)
+    x_quant = x_int*scale
+    return x_quant
+
+def quant_complex(x, n_bits, mag_quant = False, clipping_factor = 1.0):
+    # Attempt to quantize sensitivity maps
+
+    # Approach 1: Try to quantize real and imag parts separately
+    if mag_quant == False:
+        x_real = x.real
+        x_imag = x.imag
+    
+        x_real_quant = quant_tensor(x_real, n_bits, clipping_factor)
+        x_imag_quant = quant_tensor(x_imag, n_bits, clipping_factor)
+
+        return torch.complex(x_real_quant, x_imag_quant)
+    # Approach 2: Try to quantize magnitude and phase
+    if mag_quant == True:
+        x_mag = x.abs()
+        x_phase = x.angle()
+        
+        x_mag_quant = quant_tensor(x_mag, n_bits, clipping_factor)
+        x_phase_quant = quant_tensor(x_phase, n_bits, clipping_factor)
+
+        return x_mag * torch.exp(1j * x_phase_quant)
+def espirit(
+    kspace: torch.Tensor,  # (B, C, Nx, Ny)
+    acs_size: Tuple[int, int] = (24, 24),
+    kernel_size: int = 8,
+    thresh_rowspace: float = 0.05,
+    thresh_eig: float = 0.95,
+    rtol: float = 1e-3,
+    maxit: int = 100,
+    block_size: int = 8192,
+):
+    B, C, Nx, Ny = kspace.shape
+    ks = kernel_size
+    device, dtype = kspace.device, kspace.dtype
+    # 1) ACS extraction
+    ax, ay = acs_size
+    cx, cy = Nx // 2, Ny // 2
+    kspace_acs = kspace[:, :, cx - ax // 2 : cx + ax // 2, cy - ay // 2 : cy + ay // 2]
+
+    # 2) Hankel matrix (patches)
+    patches = (
+        kspace_acs.permute(0, 2, 3, 1)
+        .unfold(1, ks, 1)
+        .unfold(2, ks, 1)
+        .reshape(B, -1, ks * ks * C)
+    )
+
+    # 3) SVD
+    _, S, Vh = torch.linalg.svd(patches, full_matrices=False)
+    V = Vh.conj().transpose(-2, -1)
+
+    # 4) Row-space truncation (vectorized; 1 sync total)
+    counts = (S >= thresh_rowspace * S[:, :1]).sum(dim=1)   # (B,)
+    Nbasis = int(counts.max().clamp_min(1).item())
+    V = V[:, :, :Nbasis]
+    # 5) Kernels → image domain
+    Vkernel = (
+        V.permute(0, 2, 1)
+        .reshape(B, Nbasis, C, ks, ks)
+        .permute(0, 2, 1, 3, 4)
+    )  # (B, C, K, ks, ks)
+    
+    # Avoid explicit pad allocation: implicit zero-pad via s=(Nx,Ny)
+    Vk = torch.fft.ifft2(Vkernel, s=(Nx, Ny), dim=(-2, -1))
+    Vk = torch.fft.fftshift(Vk, dim=(-2, -1)) * (Nx * Ny)
+
+    # Vk: (B, C, K, Nx, Ny) -> (B, P, C, K)
+    Vk = Vk.reshape(B, C, Nbasis, -1).permute(0, 3, 1, 2)
+    P = Vk.shape[1]
+
+    # 6) Power method
+    Q = torch.randn(B, P, C, device=device, dtype=dtype)
+    Q = Q / (Q.norm(dim=-1, keepdim=True) + 1e-12)
+
+    for _ in range(maxit):
+        Q_new = torch.empty_like(Q)
+
+        for p0 in range(0, P, block_size):
+            p1 = min(p0 + block_size, P)
+            Vblk = Vk[:, p0:p1]   # (B, Pb, C, K)
+            Qblk = Q[:, p0:p1]    # (B, Pb, C)
+
+            tmp = torch.einsum("bpck,bpc->bpk", Vblk.conj(), Qblk)
+            Q_new[:, p0:p1] = torch.einsum("bpck,bpk->bpc", Vblk, tmp)
+
+        Q_new = Q_new / (Q_new.norm(dim=-1, keepdim=True) + 1e-12)
+
+        # still a sync (Python if), but only once per iter
+        if (Q_new - Q).norm() < rtol:
+            Q = Q_new
+            break
+        Q = Q_new
+
+    # 7) Eigenvalue estimate
+    lam = torch.empty(B, P, device=device, dtype=torch.float32)
+
+    for p0 in range(0, P, block_size):
+        p1 = min(p0 + block_size, P)
+        Vblk = Vk[:, p0:p1]
+        Qblk = Q[:, p0:p1]
+
+        tmp = torch.einsum("bpck,bpc->bpk", Vblk.conj(), Qblk)
+        lam[:, p0:p1] = (tmp.abs() ** 2).sum(dim=-1).real / (ks ** 2)
+
+    lam = lam.reshape(B, Nx, Ny)
+    Q = Q.reshape(B, Nx, Ny, C)
+
+    # 8) Threshold & normalize
+    mask = lam > thresh_eig
+    smaps = (mask[..., None] * Q).permute(0, 3, 1, 2).conj()
+
+    ref = smaps[:, :1]
+    smaps = smaps * (ref / (ref.abs() + 1e-12)).conj()
+    return smaps

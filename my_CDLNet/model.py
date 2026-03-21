@@ -207,8 +207,6 @@ class LPDSNet(nn.Module):
                         l0 = 1e-3, # initial threshold
                         eta_0 = 0.5,
                         theta_0 = 0.,
-                        E = None, # Measurement operator
-                        EH = None,
                         adaptive = False, # noise adaptive threshold
                         e2e_diff = False, # Indicate whether or not we use this for diffusion, then we need a 2nd noise input
                         init = True): # False -> use power method for weight init
@@ -231,14 +229,6 @@ class LPDSNet(nn.Module):
             self.l_2 = nn.Parameter(torch.zeros(K, 1, M, 1, 1))
         else:
             self.l_2 = torch.zeros(K, 1, M, 1, 1)
-        # If we have E = None, then self.E is going to be an identity mapping (corresponding to a denoising problem)
-        if E:
-            self.E = E
-            self.EH = EH
-        else: 
-            self.E = nn.Identity()
-            self.EH = nn.Identity()
-        
         # weight initialization (important! must initialize weights same weights for A and B)
         W = torch.randn(M, C, P, P, dtype = torch.cfloat)
         for k in range(K):
@@ -280,23 +270,22 @@ class LPDSNet(nn.Module):
         self.theta = nn.Parameter(theta_0 * torch.ones(K, 1))
 
     def forward(self, y, sigma=None, mask = None, smaps = None, mri = False):
-        # Will need to do this for MRI reconstruction
-        # set up encoding/decoding operators
-        # Flatten y, smaps
+        # y         B x C x H x W
+        # smaps     B x C x H x W
+        # mask      B x 1 x H x W
         if mri:
-            # y = torch.squeeze(y)
-            # smaps = torch.squeeze(smaps)
-            E = partial(batched_mri_encoding, acceleration_map = mask, smaps = smaps)
-            EH = partial(batched_mri_decoding, acceleration_map = mask, smaps = smaps)
+            E = partial(batched_mri_encoding, mask = mask, smaps = smaps)
+            EH = partial(batched_mri_decoding, mask = mask, smaps = smaps)
         else:
-            E = self.E
-            EH = self.EH
+            # If not MRI, then it's a denoising task
+            E = nn.Identity()
+            EH = nn.Identity()
         # Apply forward measurement operator 
         EHy = EH(y)
         # mean subtraction and stride padding 
         yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
-        c1 = 0 if sigma is None or not self.adaptive else sigma/255.0
+        c1 = 0 if sigma is None or not self.adaptive else sigma
 
         x_prev = torch.zeros_like(EHy)
         z = torch.zeros_like(self.A[0](x_prev))
@@ -315,22 +304,25 @@ class LPDSNet(nn.Module):
         # Will need to do this for MRI reconstruction
         # set up encoding/decoding operators
         # Flatten y, smaps
+        # y         B x C x H x W
+        # x_init    B x 1 x H x W
+        # smaps     B x C x H x W
+        # mask      B x 1 x H x W
         if mri:
-            # y = torch.squeeze(y)
-            # smaps = torch.squeeze(smaps)
-            E = partial(batched_mri_encoding, acceleration_map = mask, smaps = smaps)
-            EH = partial(batched_mri_decoding, acceleration_map = mask, smaps = smaps)
+            E = partial(batched_mri_encoding, mask = mask, smaps = smaps)
+            EH = partial(batched_mri_decoding, mask = mask, smaps = smaps)
         else:
-            E = self.E
-            EH = self.EH
+            # If not MRI, then it's a denoising task
+            E = nn.Identity()
+            EH = nn.Identity()
         # Apply forward measurement operator 
         EHy = EH(y)
         # mean subtraction and stride padding 
         yp, params = pre_process(EHy, self.s, mask = 1)
         # Threshold scale factor
-        c1 = 0 if sigma is None or not self.adaptive else sigma/255.0
+        c1 = 0 if sigma is None or not self.adaptive else sigma
         # Diffusion scale factor
-        c2 = 0 if sigma_t is None or not self.adaptive else sigma_t/255.0
+        c2 = 0 if sigma_t is None or not self.adaptive else sigma_t
 
         # If we do not want to initialize x as anything in particular, set it to 0
         if x_init is None:

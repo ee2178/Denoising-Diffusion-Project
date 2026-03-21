@@ -1,0 +1,55 @@
+fit: using device cuda:0
+TRAIN:   1%|          | 1999/300000 [20:41<51:58:09,  1.59it/s]/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/integration/torch/wandb_torch.py:199: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647350383/work/aten/src/ATen/native/Copy.cpp:308.)
+  flat = flat.type(torch.cuda.FloatTensor)
+TRAIN:  27%|██▋       | 80000/300000 [14:19:33<37:50:11,  1.62it/s] 
+                                                            
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 5000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 10000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 15000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 20000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 25000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 30000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 35000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 40000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 45000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 50000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 55000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 60000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 65000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 70000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 75000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 80000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 85000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 90000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 95000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 100000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 105000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 110000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 115000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 120000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6/net.ckpt (step 125000)

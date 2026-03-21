@@ -25,14 +25,14 @@
             "epochs": null,
             "image_noise_std": [
                 0,
-                126
+                0.5
             ],
             "max_steps": 300000,
             "mcsure": false,
             "noise_dist": "cosine",
             "noise_std": [
-                10,
-                13
+                0.01,
+                0.02
             ],
             "save_every": 5000,
             "save_freq": 5,
@@ -44,10 +44,10 @@
         "loaders": {
             "batch_size": 1,
             "crop_size": 256,
-            "end_slice": 25,
+            "end_slice": 20,
             "modality": "knee",
             "num_workers": 14,
-            "scaling_fac": 2000.0,
+            "scaling_fac": 4000.0,
             "start_slice": 10,
             "trn_kspace_path_list": [
                 "../../datasets/fastmri/knee/multicoil_train"

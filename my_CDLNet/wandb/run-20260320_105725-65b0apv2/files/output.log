@@ -1,0 +1,29 @@
+fit: using device cuda:0
+TRAIN:   0%|          | 0/300000 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 390, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 163, in fit
+    loss.backward()
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/_tensor.py", line 581, in backward
+    torch.autograd.backward(
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/autograd/__init__.py", line 340, in backward
+    grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/autograd/__init__.py", line 206, in _make_grads
+    raise RuntimeError(msg)
+RuntimeError: grad can be implicitly created only for real scalar outputs but got torch.complex64
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 390, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 163, in fit
+    loss.backward()
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/_tensor.py", line 581, in backward
+    torch.autograd.backward(
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/autograd/__init__.py", line 340, in backward
+    grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)
+  File "/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torch/autograd/__init__.py", line 206, in _make_grads
+    raise RuntimeError(msg)
+RuntimeError: grad can be implicitly created only for real scalar outputs but got torch.complex64

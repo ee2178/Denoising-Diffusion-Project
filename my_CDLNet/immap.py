@@ -9,7 +9,7 @@ import train
 import os
 import gc
 
-from mri_utils import mri_encoding, mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor, espirit
+from mri_utils import batched_mri_encoding, batched_mri_decoding, walsh_smaps, fftc, ifftc, make_acc_mask, quant_complex, quant_tensor, espirit
 from functorch import jacrev, jacfwd
 from solvers import conj_grad
 from pprint import pprint
@@ -53,13 +53,13 @@ class ImMAP(nn.Module):
         # Set initial conditions
         x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
 
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 # Get jacobian and denoiser output
                 def denoise(x, sigma, f = self.denoiser):
-                    x_hat, _ = f(x, sigma*255.)
+                    x_hat, _ = f(x, sigma)
                     return x_hat
                 x_hat_t = denoise(x_t, sigma_t)
                 # Get noise level estimate
@@ -76,7 +76,7 @@ class ImMAP(nn.Module):
                 v_t, tol_reached = conj_grad(S_t, E(x_hat_t) - y, max_iter = 1e5, tol=1e-2, verbose = False)
                 v_t = torch.squeeze(v_t)
                 EHv_t = EH(v_t)
-                EHv_t = EHv_t[None, None, :, :]
+                EHv_t = EHv_t
                 # Compute vjp
                 _, (grad_likelihood, _) = torch.autograd.functional.vjp(denoise, (x_t, sigma_t), EHv_t)
                 grad_likelihood = -1*sigma_t_sq*grad_likelihood
@@ -117,8 +117,8 @@ class ImMAP(nn.Module):
             t = 60
             sigma_t = sigma_start
         sigma_y = noise_level
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
 
         # Precompute EHy for calculation
         EHy = EH(y)
@@ -128,7 +128,7 @@ class ImMAP(nn.Module):
 
         with torch.no_grad():
             while sigma_t > self.sigma_L:
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                x_hat_t, _ = self.denoiser(x_t, sigma_t)
                 # Get noise level estimate
                 sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
                 sigma_t = torch.sqrt(sigma_t_sq)
@@ -182,76 +182,6 @@ class ImMAP(nn.Module):
                 fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
                 saveimg(x_t, fname)
         return x_t
-    def forward_quant_smaps(self, y, noise_level, acceleration_map, smaps, save_dir = None, mode = 2, n_bits = 4):
-        # A method to experiment with different quantization steps within diffusion process
-        # We will focus mostly on quantization of smaps
-        
-        smaps_quant = quant_complex(smaps, n_bits, mag_quant = False, clipping_factor = 1.0)
-        # smaps_quant = smaps
-        if mode == 2:
-            out = self.forward_2(y, noise_level, acceleration_map, smaps, save_dir)
-        if mode == 1:
-            out = self.forward(y, noise_level, acceleration_map, smaps, save_dir)
-        return out
-    def forward_quant(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True, mode = 2, n_bits = 16, clipping_factor = 1.0):
-        # Set initial conditions
-        x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
-        
-        # Try quantizing smaps down to 4 bit!
-        # smaps = quant_complex(smaps, 4, mag_quant = False, clipping_factor = 1.0)
-
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
-        with torch.no_grad():
-            while sigma_t > self.sigma_L:
-                # Get jacobian and denoiser output
-                def denoise(x, sigma, f = self.denoiser, n_bits = n_bits, clipping_factor = clipping_factor):
-                    x_hat, _ = f.forward_quant(x, sigma*255., n_bits = n_bits, clipping_factor = clipping_factor)
-                    return x_hat
-                x_hat_t = denoise(x_t, sigma_t)
-                
-                # Get noise level estimate
-                sigma_t_sq = torch.mean((x_hat_t - x_t).abs()**2)
-                # Tweedie's formula
-                grad_prior = x_hat_t - x_t
-                # PiGDM Laplace Approx (use * operator because the forward operator E starts with elementwise multiplication
-                def S_t(x, noise_level=noise_level, sigma_t_sq = sigma_t_sq, E = E, EH = EH):
-                    # We do not actually want to explicitly compute Sigma_t, but rather have the ability to apply it to a matrix
-                    x = torch.squeeze(x)
-                    return noise_level**2 * x + sigma_t_sq/(1+sigma_t_sq)*E(EH(x))
-                # We want to solve sigma_t v_t = E x_hat - y
-                # We may use CG since sigma_t is a covariance matrix + PSD symmetric matrix
-                v_t, tol_reached = conj_grad(S_t, E(x_hat_t) - y, max_iter = 1e5, tol=1e-2, verbose = False)
-                v_t = torch.squeeze(v_t)
-                EHv_t = EH(v_t)
-                EHv_t = EHv_t[None, None, :, :]
-                # Compute vjp
-                _, (grad_likelihood, _) = torch.autograd.functional.vjp(denoise, (x_t, sigma_t), EHv_t)
-                grad_likelihood = -1*sigma_t_sq*grad_likelihood
-                # Update step size
-                h_t = self.h_0 * t/(1+self.h_0*(t-1))
-                sigma_t = torch.sqrt(sigma_t_sq)
-                # Update noise injection
-                gamma_t = sigma_t*((1-self.beta*h_t)**2-(1-h_t)**2)**0.5
-                noise = torch.randn_like(x_t)
-                # Stochastic gradient ascent
-                x_t = x_t + h_t * (grad_prior+grad_likelihood) + gamma_t*noise
-                if t % 5 == 0 and save_dir:
-                    fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
-                    saveimg(x_t, fname)
-                t = t + 1
-                if verbose == True:
-                    print(f"Iteration {t} complete. Noise level: {sigma_t}")
-                if sigma_t > sigma_t_prev:
-                    # Raise flag if noise is greater at next iteration
-                    print("Noise is diverging...")
-                    continue
-                sigma_t_prev = sigma_t
-            if save_dir:
-                fname = os.path.join(save_dir, "diffusion_iteration_"+str(t-1)+".png")
-                saveimg(x_t, fname)
-        return x_t
-
     def forward_2p5(self, y, noise_level, acceleration_map, smaps, e2e_net, save_dir = None, verbose = True, mode=1):
         # This implements a version of immap that conditions on an end to end reconstruction using a separate LPDSNet
         # Makes the approximation that E[x|x_t] = e2e_net(x_hat_t, 0, x_t, sigma_t)
@@ -259,8 +189,8 @@ class ImMAP(nn.Module):
         # Set initial conditions
         x_t, t, sigma_t, sigma_t_prev, y = self.init_diff(y, noise_level)
         sigma_y = noise_level
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         # Precompute EHy for calculation
         # Let us fix a noise schedule
         # Precompute the noise schedule first
@@ -285,7 +215,7 @@ class ImMAP(nn.Module):
                 # draw random noise
                 noise = torch.randn_like(x_t)
                 # Instead of performing a proximal update, use our e2e_net
-                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                v_t, _ = e2e_net.forward_double_noise(y, noise_level, mask = acceleration_map, smaps = smaps, x_init = x_t, mri = True, sigma_t = sigma_t)
                 if t == 1:
                     # grab first iterate
                     first_it = v_t.clone()
@@ -303,7 +233,7 @@ class ImMAP(nn.Module):
                 saveimg(x_t, fname)
                     
         sigma_t=0.01
-        v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+        v_t, _ = e2e_net.forward_double_noise(y, noise_level, mask = acceleration_map, smaps = smaps, x_init = x_t, mri = True, sigma_t = sigma_t)
 
         return x_t, v_t, first_it
     def forward_3(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True):
@@ -311,8 +241,8 @@ class ImMAP(nn.Module):
         # Set initial conditions
         x_t, t, _, _, y = self.init_diff(y, noise_level)
         sigma_y = noise_level
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         self.beta=0.5
         # Precompute EHy for calculation
         sig_t_sched = [1]
@@ -325,7 +255,7 @@ class ImMAP(nn.Module):
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t-1]
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                x_hat_t, _ = self.denoiser(x_t, sigma_t)
                 p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 gamma_t = sigma_t*h_t*((1-self.beta))**0.5
@@ -351,17 +281,10 @@ class ImMAP(nn.Module):
         # Set initial conditions
         x_t, t, _, _, y = self.init_diff(y, noise_level)
         sigma_y = noise_level
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         self.beta=0.5
         # Precompute EHy for calculation
-        '''
-        sig_t_sched = [1]
-        i=1
-        while sig_t_sched[-1] > 0.01:
-            sig_t_sched.append((1-self.beta * self.h_0 * i/(1+self.h_0*(i-1)))*sig_t_sched[i-1])
-            i=i+1
-        '''
         EHy = EH(y)
         
         sigma_t = 1
@@ -369,7 +292,7 @@ class ImMAP(nn.Module):
         with torch.no_grad():
             while sigma_t > self.sigma_L:
                 sigma_t = sig_t_sched[t-1]
-                x_hat_t, _ = self.denoiser(x_t, sigma_t*255.)
+                x_hat_t, _ = self.denoiser(x_t, sigma_t)
                 p_t = self.lam*sigma_y**2 / (sigma_t**2/(1+sigma_t**2))
                 h_t = self.h_0 * t/(1+self.h_0*(t-1))
                 gamma_t = sigma_t*h_t*((1-self.beta))**0.5
@@ -379,7 +302,7 @@ class ImMAP(nn.Module):
                     return EH(E(x)) + p_t*x
                 v_t, tol_reached = conj_grad(A, torch.squeeze(p_t*x_hat_t+EHy), max_iter = 1000, tol=1e-3, verbose = False)
                 '''
-                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                v_t, _ = e2e_net.forward_double_noise(y, noise_level, mask = acceleration_map, smaps = smaps, x_init = x_t, mri = True, sigma_t = sigma_t)
                 x_t = v_t + (1-self.zeta)**0.5 * h_t * (v_t-x_t) + (self.zeta)**0.5 * gamma_t * noise
                 if t % 5 == 0 and save_dir:
                     fname = os.path.join(save_dir, "diffusion_iteration_"+str(t)+".png")
@@ -396,12 +319,12 @@ class ImMAP(nn.Module):
         # In immap4, we take in a given reconstruction, add noise, and then proceed. 
         x_t, t, _, _, y = self.init_diff(y, noise_level)
         sigma_y = noise_level
-        E = partial(mri_encoding, acceleration_map = acceleration_map, smaps = smaps)
-        EH = partial(mri_decoding, acceleration_map = acceleration_map, smaps = smaps)
+        E = partial(batched_mri_encoding, mask = acceleration_map, smaps = smaps)
+        EH = partial(batched_mri_decoding, mask = acceleration_map, smaps = smaps)
         # Bring up to a reasonable noise level 
         EHy = EH(y)
         if recon is None:
-            recon = EHy[None, None]
+            recon = EHy
         x_t = recon + sigma_T*torch.randn_like(recon)
 
         # Perform regular immap2.5 iterations
@@ -417,7 +340,7 @@ class ImMAP(nn.Module):
                 # draw random noise
                 noise = torch.randn_like(x_t)
                 # Instead of performing a proximal update, use our e2e_net
-                v_t, _ = e2e_net.forward_double_noise(y[None], noise_level*255., mask = acceleration_map[None], smaps = smaps[None], x_init = x_t, mri = True, sigma_t = sigma_t*255.)
+                v_t, _ = e2e_net.forward_double_noise(y, noise_level, mask = acceleration_map, smaps = smaps, x_init = x_t, mri = True, sigma_t = sigma_t)
                 if t == 1:
                     # grab first iterate
                     first_it = v_t.clone()

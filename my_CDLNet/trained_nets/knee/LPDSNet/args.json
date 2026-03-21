@@ -22,7 +22,7 @@
             "noise_dist": "log",
             "noise_std": [
                 0,
-                126
+                0.5
             ],
             "save_every": 5000,
             "save_freq": 5,
@@ -31,14 +31,14 @@
             "verbose": true
         },
         "loaders": {
-            "batch_size": 32,
+            "batch_size": 10,
             "brain": false,
             "center_crop": 320,
             "crop_size": 128,
-            "end_slice": 25,
+            "end_slice": 20,
             "load_color": false,
             "num_workers": 14,
-            "scaling_fac": 2000.0,
+            "scaling_fac": 4000.0,
             "start_slice": 10,
             "trn_path_list": [
                 "../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train"

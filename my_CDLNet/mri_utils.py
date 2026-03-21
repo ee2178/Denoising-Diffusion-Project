@@ -16,9 +16,10 @@ def dft_matrix(N):
     return torch.exp(W)
 
 def mri_awgn(x, acceleration_map, smaps, noise_std, kspace=False):
+    # Take noise_std to be on the [0, 1] scale
     if kspace is False:
-        # Takes in a noise free ground truth, not kspace
-        x_coils = smaps[:, :]* x[None, :, :]
+        # Takes in an image domain, not kspace
+        x_coils = smaps * x
     if kspace is True:
         # Assume we take in a fully sampled kspace 
         y = ifftc(x)
@@ -30,14 +31,14 @@ def mri_awgn(x, acceleration_map, smaps, noise_std, kspace=False):
                (noise_std[1] - noise_std[0])*torch.rand(1, device=x.device)
     x_coils_noisy = x_coils + sigma*torch.randn_like(x_coils)
     y_coils = fftc(x_coils_noisy)
-    y_mask = y_coils * acceleration_map[None]
+    y_mask = y_coils * acceleration_map
     # Always return masked kspace
     return y_mask, sigma
 
 def mri_encoding(x, acceleration_map, smaps):
     # We take an acceleration_map to be a row-removed identity matrix corresponding to how many lines in kspace we keep [N x N]
     # We take a sensitivity map and assume it performs elementwise multiplication in the image domain [C x N x N]
-    x_coils = smaps[:, :]* x[None, :, :]
+    x_coils = smaps* x[None, :, :]
     # x_coils is C x N x N
     y_coils = fftc(x_coils)
     # y_coils is C x N x N
@@ -55,28 +56,23 @@ def mri_decoding(y, acceleration_map, smaps):
     x = torch.einsum("ijk, ijk -> jk", smaps.conj(), x_coils)
     return x
 
-def batched_mri_encoding(x, acceleration_map, smaps):
-    # x is slices x H x W
-    # smaps is slices x coils x H x W 
+def batched_mri_encoding(x, mask, smaps):
+    # x         B x 1 x H x W
+    # smaps     B x C x H x W
+    # mask      B x 1 x H x W 
     # Flatten x for einsum 
-    x = x[0]
-    x_coils = torch.einsum("ijkl, ikl -> ijkl", smaps, x)
-    # x_coils is C x N x N
-    y_coils = fftc(x_coils)
-    # y_coils is C x N x N
-    mask = acceleration_map
-    y_mask = y_coils * mask[None]
+    x_coils = smaps * x         # B x C x H x W
+    y_coils = fftc(x_coils)     # B x C x H x W 
+    y_mask = y_coils * mask     # B x C x H x W  
     return y_mask
 
-def batched_mri_decoding(y, acceleration_map, smaps):
-    # Apply mask to each channel of y
-    y_mask = y * acceleration_map[None]
-    # Apply ifft2
-    x_coils = ifftc(y_mask)
-    # Coil combination
-    x = torch.einsum("bijk, bijk -> bjk", smaps.conj(), x_coils)
-    # Add a batch dim 
-    x = x[None]
+def batched_mri_decoding(y, mask, smaps):
+    # y         B x C x H x W
+    # smaps     B x C x H x W
+    # mask      B x 1 x H x W
+    y_mask = mask * y           # B x C x H x W
+    x_coils = ifftc(y_mask)     # B x C x H x W
+    x = torch.sum(smaps.conj()*x_coils, dim = 1, keepdim = True) # B x 1 x H x W
     return x
 
 
@@ -155,7 +151,7 @@ def make_acc_mask(
     accel,
     acs_lines=24,
     dim=1,
-    device = 'cpu'
+    device = 'cpu',
 ):
     """
     Uniform Cartesian subsampling mask with fully-sampled ACS.
@@ -185,6 +181,9 @@ def make_acc_mask(
     idx_keep = torch.cat([outer_idx, acs_idx]).unique()
     # Fill mask
     mask.index_fill_(dim, idx_keep, 1.0)
+
+    # Right now mask is H x W, we don't want that. We want 1 x 1 x H x W, 4D
+    mask = mask.view(1, 1, mask.shape[-2], mask.shape[-1])
     return mask
 
 

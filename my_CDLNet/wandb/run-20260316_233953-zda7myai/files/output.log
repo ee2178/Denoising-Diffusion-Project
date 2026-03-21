@@ -1,0 +1,15 @@
+fit: using device cuda:0
+TRAIN:   1%|          | 1999/300000 [51:58<125:23:04,  1.51s/it]/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/integration/torch/wandb_torch.py:199: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647350383/work/aten/src/ATen/native/Copy.cpp:308.)
+  flat = flat.type(torch.cuda.FloatTensor)
+TRAIN:  10%|▉         | 29466/300000 [13:07:24<114:28:42,  1.52s/it]
+                                                            
+
+Checkpoint: trained_nets/knee/LPDSNet/net.ckpt (step 5000)
+
+Checkpoint: trained_nets/knee/LPDSNet/net.ckpt (step 10000)
+
+Checkpoint: trained_nets/knee/LPDSNet/net.ckpt (step 15000)
+
+Checkpoint: trained_nets/knee/LPDSNet/net.ckpt (step 20000)
+
+Checkpoint: trained_nets/knee/LPDSNet/net.ckpt (step 25000)

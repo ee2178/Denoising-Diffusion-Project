@@ -1,0 +1,27 @@
+/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/ee2178/.netrc.
+wandb: Currently logged in as: ee2178 (ee2178-nyu) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run m844hb79
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/wandb/run-20260316_234004-m844hb79
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run autumn-dawn-2
+wandb: ⭐️ View project at https://wandb.ai/ee2178-nyu/immap2p5_R6_mri_reconstruction
+wandb: 🚀 View run at https://wandb.ai/ee2178-nyu/immap2p5_R6_mri_reconstruction/runs/m844hb79
+TRAIN:   0%|          | 0/300000 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 387, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 147, in fit
+    loss = torch.mean(torch.pow(sigma_t + 1e-12, -2)(image - img_recon).abs()**2)
+NameError: name 'sigma_t' is not defined
+Traceback (most recent call last):
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 387, in <module>
+    main(args)
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 51, in main
+    fit(net,
+  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train_mri_recon.py", line 147, in fit
+    loss = torch.mean(torch.pow(sigma_t + 1e-12, -2)(image - img_recon).abs()**2)
+NameError: name 'sigma_t' is not defined
