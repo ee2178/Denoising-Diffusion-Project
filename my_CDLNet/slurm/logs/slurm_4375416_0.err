@@ -1,26 +1,0 @@
-/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
-  warn(
-wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/ee2178/.netrc.
-wandb: Currently logged in as: ee2178 (ee2178-nyu) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
-wandb: Tracking run with wandb version 0.25.1
-wandb: Run data is saved locally in /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/wandb/run-20260316_180318-bzlr8tnn
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run stoic-sunset-1
-wandb: ⭐️ View project at https://wandb.ai/ee2178-nyu/lpds_denoiser
-wandb: 🚀 View run at https://wandb.ai/ee2178-nyu/lpds_denoiser/runs/bzlr8tnn
-TRAIN:   0%|          | 0/300000 [00:00<?, ?it/s]TRAIN:   0%|          | 1/300000 [00:02<177:34:27,  2.13s/it]TRAIN:   0%|          | 2/300000 [00:03<154:25:30,  1.85s/it]TRAIN:   0%|          | 3/300000 [00:05<145:59:34,  1.75s/it]TRAIN:   0%|          | 4/300000 [00:06<139:36:51,  1.68s/it]TRAIN:   0%|          | 5/300000 [00:08<137:28:54,  1.65s/it]TRAIN:   0%|          | 6/300000 [00:10<136:01:32,  1.63s/it]TRAIN:   0%|          | 7/300000 [00:11<135:45:14,  1.63s/it]TRAIN:   0%|          | 8/300000 [00:13<134:38:22,  1.62s/it]TRAIN:   0%|          | 9/300000 [00:14<133:29:35,  1.60s/it]TRAIN:   0%|          | 10/300000 [00:16<135:01:58,  1.62s/it]TRAIN:   0%|          | 11/300000 [00:18<134:39:35,  1.62s/it]TRAIN:   0%|          | 12/300000 [00:19<136:53:17,  1.64s/it]TRAIN:   0%|          | 13/300000 [00:21<137:44:47,  1.65s/it]TRAIN:   0%|          | 14/300000 [00:23<136:30:53,  1.64s/it]TRAIN:   0%|          | 15/300000 [00:24<134:47:34,  1.62s/it]TRAIN:   0%|          | 16/300000 [00:26<133:52:08,  1.61s/it]TRAIN:   0%|          | 17/300000 [00:27<132:21:47,  1.59s/it]TRAIN:   0%|          | 18/300000 [00:29<132:18:50,  1.59s/it]TRAIN:   0%|          | 19/300000 [00:31<132:28:40,  1.59s/it]TRAIN:   0%|          | 20/300000 [00:32<130:54:01,  1.57s/it]TRAIN:   0%|          | 21/300000 [00:34<132:01:51,  1.58s/it]TRAIN:   0%|          | 22/300000 [00:35<132:42:41,  1.59s/it]TRAIN:   0%|          | 23/300000 [00:37<132:13:32,  1.59s/it]TRAIN:   0%|          | 24/300000 [00:39<133:03:19,  1.60s/it]TRAIN:   0%|          | 25/300000 [00:40<131:59:55,  1.58s/it]TRAIN:   0%|          | 26/300000 [00:42<130:58:50,  1.57s/it]TRAIN:   0%|          | 27/300000 [00:43<132:04:12,  1.58s/it]TRAIN:   0%|          | 28/300000 [00:45<132:50:11,  1.59s/it]TRAIN:   0%|          | 29/300000 [00:46<132:06:34,  1.59s/it]TRAIN:   0%|          | 30/300000 [00:48<132:02:22,  1.58s/it]TRAIN:   0%|          | 31/300000 [00:50<131:02:19,  1.57s/it]TRAIN:   0%|          | 32/300000 [00:51<131:03:08,  1.57s/it]TRAIN:   0%|          | 33/300000 [00:53<133:19:30,  1.60s/it]TRAIN:   0%|          | 34/300000 [00:54<133:29:12,  1.60s/it]TRAIN:   0%|          | 35/300000 [00:56<134:57:26,  1.62s/it]TRAIN:   0%|          | 36/300000 [00:58<135:18:51,  1.62s/it]TRAIN:   0%|          | 37/300000 [00:59<135:00:59,  1.62s/it]TRAIN:   0%|          | 38/300000 [01:01<134:04:29,  1.61s/it]TRAIN:   0%|          | 39/300000 [01:02<133:46:07,  1.61s/it]TRAIN:   0%|          | 40/300000 [01:04<133:37:43,  1.60s/it]TRAIN:   0%|          | 41/300000 [01:06<133:06:39,  1.60s/it]TRAIN:   0%|          | 42/300000 [01:07<132:45:23,  1.59s/it]TRAIN:   0%|          | 43/300000 [01:09<132:29:47,  1.59s/it]TRAIN:   0%|          | 44/300000 [01:10<132:54:38,  1.60s/it]TRAIN:   0%|          | 45/300000 [01:12<131:45:12,  1.58s/it]TRAIN:   0%|          | 46/300000 [01:14<133:01:05,  1.60s/it]TRAIN:   0%|          | 47/300000 [01:15<133:59:46,  1.61s/it]TRAIN:   0%|          | 48/300000 [01:17<136:38:52,  1.64s/it]TRAIN:   0%|          | 49/300000 [01:19<136:22:33,  1.64s/it]TRAIN:   0%|          | 50/300000 [01:20<134:29:17,  1.61s/it]Traceback (most recent call last):
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 308, in <module>
-    main(args)
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
-    fit(net,
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 134, in fit
-    "train/loss": avg_loss,
-NameError: name 'avg_loss' is not defined
-Traceback (most recent call last):
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 308, in <module>
-    main(args)
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
-    fit(net,
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 134, in fit
-    "train/loss": avg_loss,
-NameError: name 'avg_loss' is not defined

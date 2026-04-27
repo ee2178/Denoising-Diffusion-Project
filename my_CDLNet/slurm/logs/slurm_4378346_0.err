@@ -1,27 +1,0 @@
-/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
-  warn(
-wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/ee2178/.netrc.
-wandb: Currently logged in as: ee2178 (ee2178-nyu) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
-wandb: setting up run r04ddl2a
-wandb: Tracking run with wandb version 0.25.1
-wandb: Run data is saved locally in /scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/wandb/run-20260316_182857-r04ddl2a
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run gentle-hill-2
-wandb: ⭐️ View project at https://wandb.ai/ee2178-nyu/lpds_denoiser
-wandb: 🚀 View run at https://wandb.ai/ee2178-nyu/lpds_denoiser/runs/r04ddl2a
-TRAIN:   0%|          | 0/300000 [00:00<?, ?it/s]TRAIN:   0%|          | 1/300000 [00:02<173:08:10,  2.08s/it]TRAIN:   0%|          | 2/300000 [00:03<152:28:29,  1.83s/it]TRAIN:   0%|          | 3/300000 [00:05<141:58:27,  1.70s/it]TRAIN:   0%|          | 4/300000 [00:06<138:41:48,  1.66s/it]TRAIN:   0%|          | 5/300000 [00:08<136:09:05,  1.63s/it]TRAIN:   0%|          | 6/300000 [00:10<134:53:35,  1.62s/it]TRAIN:   0%|          | 7/300000 [00:11<133:18:32,  1.60s/it]TRAIN:   0%|          | 8/300000 [00:13<132:29:51,  1.59s/it]TRAIN:   0%|          | 9/300000 [00:14<132:08:49,  1.59s/it]TRAIN:   0%|          | 10/300000 [00:16<132:36:13,  1.59s/it]TRAIN:   0%|          | 11/300000 [00:17<132:50:55,  1.59s/it]TRAIN:   0%|          | 12/300000 [00:19<132:52:59,  1.59s/it]TRAIN:   0%|          | 13/300000 [00:21<131:42:19,  1.58s/it]TRAIN:   0%|          | 14/300000 [00:22<130:40:08,  1.57s/it]TRAIN:   0%|          | 15/300000 [00:24<129:22:33,  1.55s/it]TRAIN:   0%|          | 16/300000 [00:25<128:25:54,  1.54s/it]TRAIN:   0%|          | 17/300000 [00:27<127:40:21,  1.53s/it]TRAIN:   0%|          | 18/300000 [00:28<126:44:39,  1.52s/it]TRAIN:   0%|          | 19/300000 [00:30<125:52:14,  1.51s/it]TRAIN:   0%|          | 20/300000 [00:31<125:48:54,  1.51s/it]TRAIN:   0%|          | 21/300000 [00:33<125:17:52,  1.50s/it]TRAIN:   0%|          | 22/300000 [00:34<127:36:18,  1.53s/it]TRAIN:   0%|          | 23/300000 [00:36<126:28:24,  1.52s/it]TRAIN:   0%|          | 24/300000 [00:37<126:44:04,  1.52s/it]TRAIN:   0%|          | 25/300000 [00:39<126:45:34,  1.52s/it]TRAIN:   0%|          | 26/300000 [00:40<127:07:09,  1.53s/it]TRAIN:   0%|          | 27/300000 [00:42<128:58:24,  1.55s/it]TRAIN:   0%|          | 28/300000 [00:43<128:52:53,  1.55s/it]TRAIN:   0%|          | 29/300000 [00:45<129:46:32,  1.56s/it]TRAIN:   0%|          | 30/300000 [00:47<129:30:21,  1.55s/it]TRAIN:   0%|          | 31/300000 [00:48<129:04:36,  1.55s/it]TRAIN:   0%|          | 32/300000 [00:50<130:21:10,  1.56s/it]TRAIN:   0%|          | 33/300000 [00:51<129:37:52,  1.56s/it]TRAIN:   0%|          | 34/300000 [00:53<128:34:45,  1.54s/it]TRAIN:   0%|          | 35/300000 [00:54<128:09:36,  1.54s/it]TRAIN:   0%|          | 36/300000 [00:56<127:23:41,  1.53s/it]TRAIN:   0%|          | 37/300000 [00:57<127:12:22,  1.53s/it]TRAIN:   0%|          | 38/300000 [00:59<127:02:59,  1.52s/it]TRAIN:   0%|          | 39/300000 [01:00<129:15:07,  1.55s/it]TRAIN:   0%|          | 40/300000 [01:02<129:59:06,  1.56s/it]TRAIN:   0%|          | 41/300000 [01:04<132:55:20,  1.60s/it]TRAIN:   0%|          | 42/300000 [01:05<134:34:12,  1.62s/it]TRAIN:   0%|          | 43/300000 [01:07<132:28:31,  1.59s/it]TRAIN:   0%|          | 44/300000 [01:08<130:19:49,  1.56s/it]TRAIN:   0%|          | 45/300000 [01:10<129:32:39,  1.55s/it]TRAIN:   0%|          | 46/300000 [01:12<129:20:24,  1.55s/it]TRAIN:   0%|          | 47/300000 [01:13<131:15:25,  1.58s/it]TRAIN:   0%|          | 48/300000 [01:15<129:37:28,  1.56s/it]TRAIN:   0%|          | 49/300000 [01:16<129:05:18,  1.55s/it]TRAIN:   0%|          | 50/300000 [01:18<128:23:17,  1.54s/it]Traceback (most recent call last):
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 313, in <module>
-    main(args)
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
-    fit(net,
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 135, in fit
-    "train/psnr": psnr,
-UnboundLocalError: local variable 'psnr' referenced before assignment
-Traceback (most recent call last):
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 313, in <module>
-    main(args)
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 26, in main
-    fit(net,
-  File "/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet/train.py", line 135, in fit
-    "train/psnr": psnr,
-UnboundLocalError: local variable 'psnr' referenced before assignment

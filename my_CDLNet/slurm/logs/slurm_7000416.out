@@ -1,0 +1,78 @@
+{'model': {'C': 1,
+           'K': 30,
+           'M': 169,
+           'P': 7,
+           'adaptive': True,
+           'e2e_diff': True,
+           's': 2},
+ 'mri': {'R': 6,
+         'acs_lines': 20,
+         'kspace_type': 'measurement',
+         'whiten_kspace': True},
+ 'paths': {'ckpt': None,
+           'save': 'trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE'},
+ 'train': {'fit': {'backtrack_thresh': 5,
+                   'blur': False,
+                   'clip_grad': 0.5,
+                   'demosaic': False,
+                   'denoiser_args_path': 'trained_nets/knee/LPDSNet/args.json',
+                   'e2enet_args_path': 'trained_nets/knee/LPDS_MRI_Recon_R6_nl1nl2Loss/args.json',
+                   'epochs': None,
+                   'image_noise_std': [0.01, 1],
+                   'init_type': None,
+                   'loss_type': 'complex-mse',
+                   'max_steps': 300000,
+                   'mcsure': False,
+                   'noise_dist': 'cosine',
+                   'noise_log_base': 100,
+                   'noise_std': [0.0, 0.05],
+                   'pix_width': [1, 10],
+                   'save_every': 5000,
+                   'save_freq': 5,
+                   'sigma_scaling': True,
+                   'ssdu_base_accel': 2,
+                   'ssdu_masking': False,
+                   'val_every': 5000,
+                   'val_freq': 50,
+                   'verbose': True,
+                   'x_init': True},
+           'loaders': {'batch_size': 1,
+                       'crop_size': 256,
+                       'end_slice': 27,
+                       'modality': 'knee',
+                       'num_workers': 14,
+                       'scaling_fac': 5000.0,
+                       'start_slice': 15,
+                       'trn_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_train'],
+                       'trn_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train'],
+                       'tst_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_test_v2'],
+                       'tst_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test'],
+                       'val_kspace_path_list': ['../../datasets/fastmri/knee/multicoil_val'],
+                       'val_path_list': ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val']},
+           'opt': {'lr': 0.0005},
+           'sched': {'params': {'T_max': 300000, 'eta_min': 1e-06},
+                     'type': 'cosine'}},
+ 'type': 'LPDSNet'}
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train']:
+Loading ['../../datasets/fastmri/knee/multicoil_train']
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val']:
+Loading ['../../datasets/fastmri/knee/multicoil_val']
+Loading ['../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test']:
+Loading ['../../datasets/fastmri/knee/multicoil_test_v2']
+Running power-method on initial dictionary...
+Done. L=3.347e+03-1.490e-05j.
+Current Learning Rate(s):
+0.0005
+Total Number of Parameters: 760,710
+Using trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE ...
+fit: using device cuda:0
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE/net.ckpt (step 5000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE/net.ckpt (step 10000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE/net.ckpt (step 15000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE/net.ckpt (step 20000)
+
+Checkpoint: trained_nets/knee/LPDS_ImMAP2p5_R6_noSSDUMasking_sigmaScaleON_noiseCOSINE/net.ckpt (step 25000)

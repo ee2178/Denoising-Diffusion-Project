@@ -10,8 +10,8 @@
 	"s": 2
 },
 "paths": {
-	"save": "trained_nets/knee/LPDS_ImMAP2p5_R10",
-	"ckpt": "trained_nets/knee/LPDS_ImMAP2p5_R10/net.ckpt"
+	"save": "trained_nets/knee/LPDS_ImMAP2p5_NewArch2_R10_nl1nl2Loss_NoisyKSpace",
+	"ckpt": null
 },
 "train": {
 	"loaders": {
@@ -23,28 +23,35 @@
 		"trn_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_train"],
         "val_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_val"],
         "tst_kspace_path_list": ["../../datasets/fastmri/knee/multicoil_test_v2"],
-        "start_slice": 10,
-        "end_slice": 20,
-        "scaling_fac":4e3,
+        "start_slice": 12,
+        "end_slice": 25,
+        "scaling_fac":5e3,
         "num_workers": 14,
         "modality": "knee"
 	},
 	"fit": {
 		"epochs": null,
-		"noise_std": [0.01, 0.02],
-		"image_noise_std": [0, 0.5],
+		"noise_std": [0.0, 0.05],
+		"image_noise_std": [0.01, 1],
         "val_freq": 50,
 		"save_freq": 5,
 		"backtrack_thresh": 5,
 		"verbose": true,
-		"clip_grad": 5e-2,
+		"clip_grad": 5e-1,
+        "blur": false,
+        "pix_width":[1, 10],
+        "loss_type":"magnitude-nl1-nl2",
 		"demosaic": false,
 		"mcsure": false,
         "x_init":true,
-        "noise_dist": "cosine",
-	    "denoiser_args_path":"eval_config.json",
+        "sigma_scaling":false,
+        "ssdu_masking":true,
+        "noise_dist": "log",
+	    "e2enet_args_path":"trained_nets/knee/LPDS_MRI_Recon_R10_nl1nl2Loss/args.json",
+        "denoiser_args_path":"trained_nets/knee/LPDSNet/args.json",
+        "init_type": null,
         "max_steps": 300000,
-        "val_every": 2000,
+        "val_every": 5000,
         "save_every": 5000
     },
 	"opt": {
@@ -52,11 +59,11 @@
 	},
 	"sched": {
 		"gamma": 0.95,
-		"step_size": 50
+		"step_size": 2500
 	}
 },
 "mri":{
     "R": 10,
-    "acs_lines" : 24
+    "acs_lines" : 20
 }
 }

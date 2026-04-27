@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --account=torch_pr_89_general
+#SBATCH --account=torch_pr_89_tandon_advanced
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=l40s
+#SBATCH --constraint=a100
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64GB
 #SBATCH --time=48:00:00
-#SBATCH --job-name=LPDSNet-IMMAP2p5-R6
+#SBATCH --job-name=LPDSNet-IMMAP2p5-R6-KSpace-Whitened
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
 #SBATCH --output=logs/slurm_%j.out
@@ -20,4 +20,4 @@ conda activate env      # Replace with your actual env name
 
 # Navigate to the directory containing train.py
 cd ~/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet       # Replace with the actual path
-python3 train_mri_recon.py immap2p5_config.json
+python3 train_mri_recon.py configs/knee/immap2p5_R6_config.json

@@ -14,43 +14,23 @@ def conj_grad(A, b, x0 = None, tol = 1e-6, max_iter = 100, verbose = False):
     p = r.clone()
     x = x0
     tol_reached = False
-    if verbose:
-        for k in tqdm(range(int(max_iter))):
-            # Apply operator to p
-            Ap = A(p)
-            # Implement inner products as elementwise sums
-            rsold = torch.sum(r.conj() * r)
-            alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8) 
-            x_next = x + alpha * p
-            r_next = r - alpha * Ap
-            rsnew = torch.sum(r_next.conj() * r)
-        
-            if torch.sqrt(rsnew.real) <= tol:
-                tol_reached = True
-                return x_next, tol_reached
-            beta = rsnew/rsold
-            p = r_next + beta * p
-            r = r_next
-            x = x_next
-            res = rsnew.real
-            # print(f"Iteration: {k}, Residual: {res}")
-    else:
-        for k in range(int(max_iter)):
-            # Apply operator to p
-            Ap = A(p)
-            # Implement inner products as elementwise sums
-            rsold = torch.sum(r.conj() * r)
-            alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8)
-            x_next = x + alpha * p
-            r_next = r - alpha * Ap
-            rsnew = torch.sum(r_next.conj() * r)
-            if torch.sqrt(rsnew.real) <= tol:
-                tol_reached = True
-                return x_next, tol_reached
-            beta = rsnew/rsold
-            p = r_next + beta * p
-            r = r_next
-            x = x_next
-
+    for k in range(int(max_iter)):
+        # Apply operator to p
+        Ap = A(p)
+        # Implement inner products as elementwise sums
+        rsold = torch.sum(r.conj() * r).real
+        alpha = rsold / (torch.sum(p.conj() * Ap) + 1e-8)
+        x_next = x + alpha * p
+        r_next = r - alpha * Ap
+        rsnew = torch.sum(r_next.conj() * r_next).real
+        beta = rsnew/(rsold + 1e-8)
+        if (torch.sqrt(beta.real) <= tol) or torch.max((x_next - x).abs()) < tol:
+            tol_reached = True
+            return x_next, tol_reached
+        p = r_next + beta * p
+        r = r_next
+        x = x_next
+        if verbose is True:
+            print(f"Iteration: {k}, Residual: {rsnew}")
     return x, tol_reached
 

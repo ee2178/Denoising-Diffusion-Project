@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64GB
 #SBATCH --time=48:00:00
-#SBATCH --job-name=LPDSNet-Knee
+#SBATCH --job-name=LPDSNet-Brain
 #SBATCH --array=0-4
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ee2178@nyu.edu
@@ -25,13 +25,14 @@ cd ~/scratch/ee2178/Denoising-Diffusion-Project/my_CDLNet
 # -------------------------------
 # Config lists
 # -------------------------------
+DATASET="brain"   # change to "brain" when needed
 
 configs=(
-"configs/knee/config.json"
-"configs/knee/immap2p5_R10_config.json"
-"configs/knee/immap2p5_R6_config.json"
-"configs/knee/mri_R10_config.json"
-"configs/knee/mri_R6_config.json"
+"configs/${DATASET}/config.json"
+"configs/${DATASET}/immap2p5_R10_config.json"
+"configs/${DATASET}/immap2p5_R6_config.json"
+"configs/${DATASET}/mri_R10_config.json"
+"configs/${DATASET}/mri_R6_config.json"
 )
 
 config=${configs[$SLURM_ARRAY_TASK_ID]}

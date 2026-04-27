@@ -41,19 +41,58 @@ def pre_process(x, stride, mask=1):
         xmean = x.sum(dim=(1,2,3), keepdim=True) / mask.sum(dim=(1,2,3), keepdim=True)
     else:
         xmean = x.mean(dim=(1,2,3), keepdim=True)
+    
     x = mask*(x - xmean)
     params.append(xmean)
-    # Scale to max of 1
-    #x_max = torch.max(x.abs())
-    #params.append(x_max)
-    #x = x / x_max
-    # pad signal for stride
     pad = calc_pad_2D(*x.shape[2:], stride)
     x = F.pad(x, pad, mode='reflect')
     if torch.is_tensor(mask):
         mask = F.pad(mask, pad, mode='reflect')
     params.append(pad) 
     return x, params
+
+def pre_process_pair(x1, x2, stride, mask=1):
+    """
+    Joint preprocessing for two images:
+    - shared mean subtraction
+    - shared padding
+
+    Args:
+        x1, x2: tensors of shape (B, C, H, W)
+        mask: either scalar or tensor of same shape
+
+    Returns:
+        x1, x2, params
+    """
+    params = []
+
+    # --- Compute joint mean ---
+    if torch.is_tensor(mask):
+        total = (x1 + x2).sum(dim=(1,2,3), keepdim=True)
+        denom = 2 * mask.sum(dim=(1,2,3), keepdim=True)
+        xmean = total / denom
+    else:
+        xmean = (x1.mean(dim=(1,2,3), keepdim=True) +
+                 x2.mean(dim=(1,2,3), keepdim=True)) / 2
+
+    # --- Mean subtraction ---
+    x1 = mask * (x1 - xmean)
+    x2 = mask * (x2 - xmean)
+
+    params.append(xmean)
+
+    # --- Padding ---
+    pad = calc_pad_2D(*x1.shape[2:], stride)
+
+    x1 = F.pad(x1, pad, mode='reflect')
+    x2 = F.pad(x2, pad, mode='reflect')
+
+    if torch.is_tensor(mask):
+        mask = F.pad(mask, pad, mode='reflect')
+
+    params.append(pad)
+
+    return x1, x2, params
 
 def post_process(x, params):
     """ undoes image pre-processing given params

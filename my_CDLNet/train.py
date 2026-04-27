@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import wandb
 
-from model import CDLNet, LPDSNet
+from model import CDLNet, LPDSNet, LPDSNetBase
 from train_utils import awgn
 from data import get_fit_loaders
 
@@ -19,10 +19,8 @@ def main(args):
     model_args, train_args, paths = [args[item] for item in ['model','train','paths']]
     loaders = get_fit_loaders(**train_args['loaders'])
     net, opt, sched, epoch0 = init_model(args, device=device)
-    
     wandb.init(project="lpds_denoiser", config=args)
     wandb.watch(net, log="gradients", log_freq=2000)
-
     fit(net, 
         opt, 
         loaders,
@@ -40,6 +38,7 @@ def fit(net, opt, loaders,
         start_epoch=1,
         clip_grad=1,
         noise_std=25,
+        loss_type = 'complex-mse',
         demosaic=False,
         verbose=True,
         val_freq=1,
@@ -50,7 +49,7 @@ def fit(net, opt, loaders,
         backtrack_thresh=5,
         log_every = 50,
         max_steps=None,
-        val_every=2000,
+        val_every=1000,
         save_every=5000):
 
     print(f"fit: using device {device}")
@@ -69,7 +68,7 @@ def fit(net, opt, loaders,
     step = start_epoch - 1
     train_loader = loaders["train"]
     train_iter = iter(train_loader)
-
+    print("Using " + loss_type + " loss.")
     # -----------------------
     # tqdm progress bar
     # -----------------------
@@ -81,7 +80,6 @@ def fit(net, opt, loaders,
     )
 
     while step < max_steps:
-
         try:
             batch = next(train_iter)
         except StopIteration:
@@ -96,23 +94,17 @@ def fit(net, opt, loaders,
 
         noisy_batch, sigma_n = awgn(batch, noise_std, dist=noise_dist)
         obsrv_batch = mask * noisy_batch
-
         opt.zero_grad()
-
+        
         batch_hat,_ = net(obsrv_batch, sigma_n, mask=mask)
-
-        if mcsure:
-            h = 1e-3
-            b = torch.randn_like(obsrv_batch)
-            batch_hat_b,_ = net(obsrv_batch + h*b, sigma_n, mask=mask)
-
-            div = 2.0*torch.mean(((sigma_n/255.0)**2)*b*(batch_hat_b-batch_hat)) / h
-            loss = torch.mean(torch.abs(obsrv_batch - batch_hat)**2) + div
-        else:
-            mse = torch.mean((batch.abs()-batch_hat.abs())**2)
-            #loss = torch.mean((sigma_n/255.+1e-4)**(-2)*torch.abs(batch-batch_hat)**2)
-            # Go back to mse loss
-            loss = mse
+        if loss_type == 'complex-mse':
+            loss = torch.mean((batch-batch_hat).abs()**2)
+        elif loss_type == 'magnitude-mse':
+            loss = torch.mean((batch.abs()-batch_hat.abs())**2)
+        elif loss_type == 'sigma-scaled-complex-mse':
+            loss = torch.mean((sigma_n+1e-2)**(-2)*(batch-batch_hat).abs()**2)
+        elif loss_type == 'sigma-scaled-magnitude-mse':
+            loss = torch.mean((sigma_n+1e-2)**(-2)*(batch.abs()-batch_hat.abs())**2)
         loss.backward()
 
         if clip_grad is not None:
@@ -121,7 +113,11 @@ def fit(net, opt, loaders,
         opt.step()
         net.project()
 
+        total_norm = grad_norm(net.parameters())
+        batch_abs = torch.max(torch.abs(batch))
+        batch_mean = torch.abs(torch.mean(batch))
         step += 1
+        # pbar.set_postfix_str(f"loss={loss.item():.1e}|gnorm={total_norm:.1e}|batch_abs={batch_abs:.1e}|batch_mean={batch_mean:.1e}|noise_levels={torch.sum(sigma_n).item():.1e}")
         pbar.update(1)
 
         if sched is not None:
@@ -154,7 +150,10 @@ def fit(net, opt, loaders,
                     batch = batch.to(device)
                     batch = batch[:,None,:,:]
 
-                    phase_nstd = (noise_std[0]+noise_std[1])/2.0
+                    # phase_nstd = (noise_std[0]+noise_std[1])/2.0
+                    phase_nstd = 0.05
+                    # Take an average on a log scale 
+                    # phase_nstd = 10**(math.log10(noise_std[0])+math.log10(noise))
 
                     noisy_batch, sigma_n = awgn(batch, phase_nstd, dist=noise_dist)
                     obsrv_batch = noisy_batch
@@ -165,25 +164,28 @@ def fit(net, opt, loaders,
                     psnr += -10*np.log10(mse.item()+1e-12)
 
                     if itern == 0:
+                        # Divide by 10 for visibility, wandb handles normalization
                         gt = batch[0].abs().detach().cpu().numpy()
                         noisy = noisy_batch[0].abs().detach().cpu().numpy()
                         recon = batch_hat[0].abs().detach().cpu().numpy()
 
                         # normalize for visibility
-                        gt = gt / (gt.max() + 1e-8)
-                        noisy = noisy / (noisy.max() + 1e-8)
-                        recon = recon / (recon.max() + 1e-8)
+                        # gt = gt / (gt.max() + 1e-8)
+                        # noisy = noisy / (noisy.max() + 1e-8)
+                        # recon = recon / (recon.max() + 1e-8)
                         
                         gt = np.squeeze(gt)
                         noisy = np.squeeze(noisy)
                         recon = np.squeeze(recon)
 
-                        panel = np.concatenate([noisy, recon, gt], axis=1)
+                        err = np.abs(gt - recon)*5
 
+                        panel = np.concatenate([noisy, recon, gt, err], axis=1)
+                        panel = panel/panel.max()
                         wandb.log({
                             "denoiser_panel": wandb.Image(
                             panel,
-                            caption="Input (Noisy) | Denoised | Ground Truth"
+                            caption="Input (Noisy) | Denoised | Ground Truth | Error "
                             )
                         }, step=step)
                 psnr /= (itern+1)
@@ -243,6 +245,8 @@ def init_model(args, device, quant_ckpt = False):
         net  = CDLNet(**model_args, init=init)
     elif model_type == "LPDSNet":
         net = LPDSNet(**model_args, init = init)
+    elif model_type == "LPDSNetBase":
+        net = LPDSNetBase(**model_args, init = init)
     # Place model on gpu
     net.to(device)
     
@@ -274,6 +278,16 @@ def init_model(args, device, quant_ckpt = False):
     print(f"Using {paths['save']} ...")
     os.makedirs(paths['save'], exist_ok=True)
     return net, opt, sched, epoch0
+
+def load_model(config, verbose = False, device = 'cpu'):
+    # Load Denoiser
+    model_args_file = open(config)
+    model_args = json.load(model_args_file)
+    model_args_file.close()
+    if verbose == True:
+        pprint(model_args)
+    net, _, _, steps = init_model(model_args, device=device)
+    return net
 
 def save_ckpt(path, net=None,epoch=None,opt=None,sched=None):
     """ Save Checkpoint.

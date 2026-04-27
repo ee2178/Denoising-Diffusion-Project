@@ -1,0 +1,54 @@
+{
+"type": "LPDSNet",
+"model": {
+	"adaptive": true,
+	"K": 30,
+	"M": 169,
+	"C": 1,
+	"P": 7,
+	"s": 2
+},
+"paths": {
+	"save": "trained_nets/knee/LPDSNet",
+	"ckpt": null
+},
+"train": {
+	"loaders": {
+		"batch_size": 10,
+		"crop_size": 256,
+		"trn_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/train"],
+		"val_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/val"],
+		"tst_path_list": ["../../datasets/fastmri_preprocessed/knee_coil_combined/pd/test"],
+		"load_color": false,
+		"start_slice": 12,
+		"end_slice": 25,
+        "scaling_fac":5e3,
+        "num_workers": 14,
+        "brain": false,
+        "center_crop": 320
+    },
+	"fit": {
+		"epochs": null,
+		"noise_std": [0.001, 0.5],
+		"val_freq": 50,
+		"save_freq": 5,
+		"backtrack_thresh": 5,
+		"verbose": true,
+		"clip_grad": 5e-2,
+		"loss_type":"complex-mse",
+        "demosaic": false,
+		"mcsure": false,
+        "noise_dist": "log",
+        "max_steps": 300000,
+        "val_every": 2000,
+        "save_every": 5000
+	},
+	"opt": {
+		"lr": 5e-4
+	},
+	"sched": {
+		"gamma": 0.95,
+		"step_size": 50
+	}
+}
+}

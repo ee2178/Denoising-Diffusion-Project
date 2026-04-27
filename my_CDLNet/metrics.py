@@ -11,6 +11,7 @@ import lpips
 
 from pprint import pprint
 from mri_utils import make_acc_mask
+from transforms import gaussian_window
 
 def joint_normalize(x, y):
     # Let's perform a normalization of two images based on their joint statistics
@@ -53,25 +54,6 @@ def nrmse(x, y):
     dyn_range = torch.max(max_xy - min_xy)
     return rmse/dyn_range
 
-# Gaussian window
-def gaussian_window(size=11, sigma=1.5):
-    coords = torch.arange(size, dtype=torch.float32) - size // 2
-    g = torch.exp(-(coords ** 2) / (2 * sigma * sigma))
-    g = g / g.sum()
-    w = torch.outer(g, g)
-    # Gaussian window normalization
-    w = w / w.sum()
-    # reshape to (1,1,k,k) so conv2d works properly
-    w = w.view(1, 1, size, size)
-    return w
-
-def complex_conv2d(img, weight, window_size):
-    # img: N,C,H,W complex
-    real = F.conv2d(img.real, weight, padding=window_size//2, groups=img.shape[1])
-    imag = F.conv2d(img.imag, weight, padding=window_size//2, groups=img.shape[1])
-    
-    return torch.complex(real, imag)
-
 def init_e2e(e2e_path, device):
     # Load LPDSNet
     lpds_args_file = open(e2e_path)
@@ -93,7 +75,8 @@ def ssim(x, y, window_size=11):
     y_mag = torch.abs(y)
 
     # 2. Prepare Gaussian window
-    w = gaussian_window(window_size).to(x.device)
+    width = int((window_size-1)/2)
+    w = gaussian_window(width).to(x.device)
     w = w.expand(x.shape[1], 1, window_size, window_size)
     pad = window_size // 2
 

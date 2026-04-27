@@ -77,7 +77,7 @@ def batched_mri_decoding(y, mask, smaps):
 
 
 def check_adjoint(E, EH, smaps):
-    x = torch.randn(smaps.shape[1], smaps.shape[2],  dtype = torch.cfloat)
+    x = torch.randn(1, 1, smaps.shape[1], smaps.shape[2],  dtype = torch.cfloat)
     x = x.to(smaps.device)
     y = torch.randn_like(E(x))
 

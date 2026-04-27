@@ -1,5 +1,0 @@
-fit: using device cuda:0
-TRAIN:   1%|          | 1999/300000 [50:20<124:16:16,  1.50s/it]/home/ee2178/scratch/ee2178/miniconda3/envs/env/lib/python3.9/site-packages/wandb/integration/torch/wandb_torch.py:199: UserWarning: Casting complex values to real discards the imaginary part (Triggered internally at /opt/conda/conda-bld/pytorch_1729647350383/work/aten/src/ATen/native/Copy.cpp:308.)
-  flat = flat.type(torch.cuda.FloatTensor)
-TRAIN:   1%|          | 3221/300000 [1:21:13<122:39:15,  1.49s/it]
-                                                           

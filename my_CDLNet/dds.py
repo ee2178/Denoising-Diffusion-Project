@@ -41,7 +41,7 @@ class DDS(nn.Module):
             ns = torch.tensor(ns)
         return ns
 
-    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True, sched = 'linear', maxit = 1e4, tol=1e-3):
+    def forward(self, y, noise_level, acceleration_map, smaps, save_dir = None, verbose = True, sched = 'linear', maxit = 1e4, tol=1e-5):
         # DDS Forward pass, assume y is noisy kspace with sigma_y = noise_level
         # Assume no warm start
         sig_t_vec = self.prep_noise_schedule(mode = sched)
